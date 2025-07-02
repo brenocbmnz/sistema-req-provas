@@ -19,17 +19,16 @@ class DisciplinaResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
     
     protected static ?string $navigationGroup = 'Cadastros Escolares';
-
-    public static function form(Form $form): Form
-    {
-        // O formulário agora fica muito mais simples
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('nome')
-                    ->required()
-                    ->columnSpanFull(),
-            ]);
-    }
+public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            Forms\Components\TextInput::make('nome')
+                ->required()
+                ->unique(ignoreRecord: true) 
+                ->columnSpanFull(),
+        ]);
+}
 
     public static function table(Table $table): Table
     {

@@ -27,7 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login() // Adiciona a rota de login padrão
-            ->brandLogo(asset('images/saobentologo.png'))
+            ->brandLogo(asset('images/saobentologo.svg'))
             ->brandLogoHeight('3rem')
             ->colors([
                 'primary' => '#881337',

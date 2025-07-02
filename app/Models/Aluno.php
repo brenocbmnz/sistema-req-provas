@@ -10,11 +10,13 @@ class Aluno extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'nome_completo',
-        'nivel_ensino',
-        'ano',
-    ];
+protected $fillable = [
+    'nome_completo',
+    'nivel_ensino',
+    'ano',
+    'turma',
+];
+
 
     // Converte a string do banco para o objeto Enum
     protected $casts = [

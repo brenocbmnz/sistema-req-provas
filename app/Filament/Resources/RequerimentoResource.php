@@ -32,13 +32,13 @@ class RequerimentoResource extends Resource
                     ->schema([
                         Forms\Components\TextInput::make('nome_completo')
                             ->label('Nome Completo do Aluno')
-                            ->required(), // dehydrated(false) removido
+                            ->required(),
 
                         Forms\Components\Select::make('nivel_ensino')
                             ->label('Nível de Ensino')
                             ->options(NivelEnsino::class)
                             ->live()
-                            ->required(), // dehydrated(false) removido
+                            ->required(),
 
                         Forms\Components\Select::make('ano')
                             ->label('Ano/Série')
@@ -48,8 +48,19 @@ class RequerimentoResource extends Resource
                                 NivelEnsino::MEDIO->value => array_combine(range(1, 3), range(1, 3)),
                                 default => [],
                             })
-                            ->required(), // dehydrated(false) removido
-                    ])->columns(3),
+                            ->required(),
+                        
+                        Forms\Components\Select::make('turma')
+                            ->label('Turma')
+                            ->options([
+                                'A' => 'A',
+                                'B' => 'B',
+                                'C' => 'C',
+                                'D' => 'D',
+                                'E' => 'E',
+                            ])
+                            ->required(),
+                    ])->columns(4),
 
                 // Seção para os dados do Requerimento
                 Forms\Components\Section::make('Dados do Requerimento')
