@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
+use App\Enums\MotivoRequerimento;
 class Requerimento extends Model
 {
     use HasFactory;
+
 
     protected $fillable = [
         'aluno_id',
@@ -16,7 +17,14 @@ class Requerimento extends Model
         'disciplina_id',
         'data_requerimento',
         'motivo',
+        'observacao', // Adicione o novo campo
         'status',
+        'professor_id',
+    ];
+
+    // Converte os campos para os Enums correspondentes
+    protected $casts = [
+        'motivo' => MotivoRequerimento::class,
     ];
 
     // Define as relações com os outros models
@@ -34,4 +42,9 @@ class Requerimento extends Model
     {
         return $this->belongsTo(Disciplina::class);
     }
+
+    public function professor()
+{
+    return $this->belongsTo(Professor::class);
+}
 }

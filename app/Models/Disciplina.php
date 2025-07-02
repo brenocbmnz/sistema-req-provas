@@ -12,4 +12,10 @@ class Disciplina extends Model
     protected $fillable = [
         'nome',
     ];
+
+    public function professores()
+{
+    return $this->belongsToMany(Professor::class, 'disciplina_professor');
+}
+
 }

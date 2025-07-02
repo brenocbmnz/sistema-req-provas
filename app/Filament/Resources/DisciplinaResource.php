@@ -3,29 +3,31 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\DisciplinaResource\Pages;
-use App\Filament\Resources\DisciplinaResource\RelationManagers;
+// Adicione a importação do novo Relation Manager
+use App\Filament\Resources\DisciplinaResource\RelationManagers\ProfessoresRelationManager; 
 use App\Models\Disciplina;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class DisciplinaResource extends Resource
 {
     protected static ?string $model = Disciplina::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-book-open';
+    
+    protected static ?string $navigationGroup = 'Cadastros Escolares';
 
     public static function form(Form $form): Form
     {
+        // O formulário agora fica muito mais simples
         return $form
             ->schema([
                 Forms\Components\TextInput::make('nome')
                     ->required()
-                    ->maxLength(255),
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -33,16 +35,7 @@ class DisciplinaResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nome')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('nome')->searchable(),
             ])
             ->filters([
                 //
@@ -59,8 +52,9 @@ class DisciplinaResource extends Resource
 
     public static function getRelations(): array
     {
+        // Registramos o nosso novo gerenciador aqui
         return [
-            //
+            ProfessoresRelationManager::class,
         ];
     }
 
@@ -72,5 +66,4 @@ class DisciplinaResource extends Resource
             'edit' => Pages\EditDisciplina::route('/{record}/edit'),
         ];
     }
-    protected static ?string $navigationGroup = 'Cadastros Escolares';
 }
