@@ -13,7 +13,15 @@ use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\BulkAction;
+use Filament\Notifications\Notification;
+use Illuminate\Support\HtmlString;
 
 class RequerimentoResource extends Resource
 {
@@ -38,11 +46,7 @@ class RequerimentoResource extends Resource
 
                         Forms\Components\Select::make('nivel_ensino')
                             ->label('Nível de Ensino')
-                            ->options([
-                                NivelEnsino::FUNDAMENTAL1->value => NivelEnsino::FUNDAMENTAL1->value,
-                                NivelEnsino::FUNDAMENTAL2->value => NivelEnsino::FUNDAMENTAL2->value,
-                                NivelEnsino::MEDIO->value => NivelEnsino::MEDIO->value,
-                            ])
+                            ->options(NivelEnsino::class)
                             ->live()
                             ->required(),
 
@@ -83,7 +87,6 @@ class RequerimentoResource extends Resource
                             ->optionsLimit(20),
                         Forms\Components\Select::make('professor_id')
                             ->label('Professor')
-                            
                             ->options(function (Get $get): Collection {
                                 $disciplinaId = $get('disciplina_id');
                                 if (!$disciplinaId) {
@@ -98,12 +101,7 @@ class RequerimentoResource extends Resource
                             ->default(now())
                             ->required(),
                         Forms\Components\Select::make('motivo')
-                            ->options([
-                                MotivoRequerimento::ATESTADO->value => MotivoRequerimento::ATESTADO->value,
-                                MotivoRequerimento::JOGOS->value => MotivoRequerimento::JOGOS->value,
-                                MotivoRequerimento::VIAGEM->value => MotivoRequerimento::VIAGEM->value,
-                                MotivoRequerimento::OUTROS->value => MotivoRequerimento::OUTROS->value,
-                            ])
+                            ->options(MotivoRequerimento::class)
                             ->live()
                             ->required(),
                         Forms\Components\Textarea::make('observacao')
@@ -139,14 +137,89 @@ class RequerimentoResource extends Resource
                     }),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->options([
+                        'Pendente' => 'Pendente',
+                        'Aprovado' => 'Aprovado',
+                        'Reprovado' => 'Reprovado',
+                    ]),
+                Filter::make('data_requerimento')
+                    ->form([
+                        Forms\Components\DatePicker::make('criado_em'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['criado_em'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('data_requerimento', '=', $date),
+                            );
+                    })
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    // CORREÇÃO AQUI: Usando Action em vez de SelectAction
+                    Action::make('alterar_status')
+                        ->label('Alterar Status')
+                        ->icon('heroicon-o-pencil-square')
+                        ->color('info')
+                        ->form([
+                            Forms\Components\Select::make('status')
+                                ->label('Novo Status')
+                                ->options([
+                                    'Pendente' => 'Pendente',
+                                    'Aprovado' => 'Aprovado',
+                                    'Reprovado' => 'Reprovado',
+                                ])
+                                ->default(fn ($record) => $record->status)
+                                ->required(),
+                        ])
+                        ->action(function (array $data, $record): void {
+                            $record->update([
+                                'status' => $data['status']
+                            ]);
+                            
+                            Notification::make()
+                                ->title('Status alterado com sucesso!')
+                                ->success()
+                                ->send();
+                        })
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\BulkAction::make('alterar_status_bulk')
+                        ->label('Alterar Status')
+                        ->icon('heroicon-o-pencil-square')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalDescription(new HtmlString('Você tem certeza que gostaria de fazer isso? <div class="text-red-200"><strong>Esta ação irá alterar os status de todos os requerimentos selecionados.</strong></div>'))
+                        ->form([
+                            Forms\Components\Select::make('status')
+                                ->label('Novo Status')
+                                ->options([
+                                    'Pendente' => 'Pendente',
+                                    'Aprovado' => 'Aprovado',
+                                    'Reprovado' => 'Reprovado',
+                                ])
+                                ->required()
+                                ->helperText('Este status será aplicado a todos os requerimentos selecionados.'),
+                        ])
+                        ->action(function (Collection $records, array $data): void {
+                            $records->each(function ($record) use ($data) {
+                                $record->update([
+                                    'status' => $data['status']
+                                ]);
+                            });
+                            
+                            Notification::make()
+                                ->title('Status alterado com sucesso!')
+                                ->body('O status de ' . $records->count() . ' requerimento(s) foi alterado para "' . $data['status'] . '".')
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ]);
     }
