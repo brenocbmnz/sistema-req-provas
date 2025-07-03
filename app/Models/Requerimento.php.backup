@@ -27,10 +27,22 @@ class Requerimento extends Model
         'professor_id',
     ];
 
-    // Apenas cast de data, sem enums para evitar problemas com Filament
+    // Converte os campos para os Enums correspondentes
     protected $casts = [
         'data_requerimento' => 'date',
     ];
+
+    // Accessor para compatibilidade com Filament - retorna string
+    public function getNivelEnsinoAttribute($value)
+    {
+        return $value ?: 'Fundamental II'; // retorna string simples
+    }
+
+    // Accessor para compatibilidade com Filament - retorna string  
+    public function getMotivoAttribute($value)
+    {
+        return $value ?: 'Outros'; // retorna string simples
+    }
 
     // Define as relações com os outros models
     public function aluno(): BelongsTo
@@ -51,5 +63,14 @@ class Requerimento extends Model
     public function professor()
     {
         return $this->belongsTo(Professor::class);
+    }
+}
+    {
+        return $value;
+    }
+
+    public function getMotivoAttribute($value)
+    {
+        return $value;
     }
 }

@@ -23,6 +23,8 @@ class RequerimentoResource extends Resource
 
     protected static ?string $navigationGroup = 'Operacional';
 
+    protected static ?int $navigationSort = 1;
+
     public static function form(Form $form): Form
     {
         return $form
@@ -36,7 +38,11 @@ class RequerimentoResource extends Resource
 
                         Forms\Components\Select::make('nivel_ensino')
                             ->label('Nível de Ensino')
-                            ->options(NivelEnsino::class)
+                            ->options([
+                                NivelEnsino::FUNDAMENTAL1->value => NivelEnsino::FUNDAMENTAL1->value,
+                                NivelEnsino::FUNDAMENTAL2->value => NivelEnsino::FUNDAMENTAL2->value,
+                                NivelEnsino::MEDIO->value => NivelEnsino::MEDIO->value,
+                            ])
                             ->live()
                             ->required(),
 
@@ -71,9 +77,13 @@ class RequerimentoResource extends Resource
                         Forms\Components\Select::make('disciplina_id')
                             ->relationship('disciplina', 'nome')
                             ->live()
-                            ->required(),
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->optionsLimit(20),
                         Forms\Components\Select::make('professor_id')
                             ->label('Professor')
+                            
                             ->options(function (Get $get): Collection {
                                 $disciplinaId = $get('disciplina_id');
                                 if (!$disciplinaId) {
@@ -88,13 +98,26 @@ class RequerimentoResource extends Resource
                             ->default(now())
                             ->required(),
                         Forms\Components\Select::make('motivo')
-                            ->options(MotivoRequerimento::class)
+                            ->options([
+                                MotivoRequerimento::ATESTADO->value => MotivoRequerimento::ATESTADO->value,
+                                MotivoRequerimento::JOGOS->value => MotivoRequerimento::JOGOS->value,
+                                MotivoRequerimento::VIAGEM->value => MotivoRequerimento::VIAGEM->value,
+                                MotivoRequerimento::OUTROS->value => MotivoRequerimento::OUTROS->value,
+                            ])
                             ->live()
                             ->required(),
                         Forms\Components\Textarea::make('observacao')
                             ->label('Observação / Justificativa')
                             ->columnSpanFull()
                             ->visible(fn (Get $get): bool => $get('motivo') === MotivoRequerimento::OUTROS->value),
+                        Forms\Components\Select::make('status')
+                            ->options([
+                                'Pendente' => 'Pendente',
+                                'Aprovado' => 'Aprovado',
+                                'Reprovado' => 'Reprovado',
+                            ])
+                            ->required()
+                            ->visibleOn('edit')
                     ])->columns(2),
             ]);
     }
@@ -103,7 +126,7 @@ class RequerimentoResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('aluno.nome_completo')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('nome_completo')->label('Aluno')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('disciplina.nome')->searchable(),
                 Tables\Columns\TextColumn::make('professor.nome')->label('Professor')->searchable(),
                 Tables\Columns\TextColumn::make('data_requerimento')->date('d/m/Y'),

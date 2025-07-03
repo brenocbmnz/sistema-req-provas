@@ -17,10 +17,4 @@ class EditDisciplina extends BaseEditPage
             Actions\DeleteAction::make(),
         ];
     }
-
-        protected function getRedirectUrl(): string{
-
-        return $this->getResource()::getUrl('index');
-        
-    }
 }

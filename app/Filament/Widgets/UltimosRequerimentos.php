@@ -16,8 +16,14 @@ class UltimosRequerimentos extends BaseWidget
         return $table
             ->query(Requerimento::query()->latest()->limit(5))
             ->columns([
-                Tables\Columns\TextColumn::make('aluno.nome_completo'),
-                Tables\Columns\TextColumn::make('disciplina.nome'),
+                Tables\Columns\TextColumn::make('nome_completo')
+                    ->label('Aluno')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('disciplina.nome')
+                    ->label('Disciplina'),
+                Tables\Columns\TextColumn::make('data_requerimento')
+                    ->label('Data')
+                    ->date('d/m/Y'),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
