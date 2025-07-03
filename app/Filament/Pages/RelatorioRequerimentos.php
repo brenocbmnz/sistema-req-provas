@@ -13,6 +13,8 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Group;
 use Filament\Forms\Get;
 use Filament\Actions\Action;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
 use App\Models\Requerimento;
 use App\Models\Trimestre;
 use App\Models\Disciplina;
@@ -21,9 +23,9 @@ use App\Enums\NivelEnsino;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Notifications\Notification;
 
-class RelatorioRequerimentos extends Page implements HasForms
+class RelatorioRequerimentos extends Page implements HasForms, HasActions
 {
-    use InteractsWithForms;
+    use InteractsWithForms, InteractsWithActions;
 
     protected static ?int $navigationSort = 2;
 
@@ -33,10 +35,57 @@ class RelatorioRequerimentos extends Page implements HasForms
     protected static ?string $title = 'Gerador de Relatórios';
 
     public ?array $data = [];
+    public ?array $dataGeral = [];
+
+    protected function getForms(): array
+    {
+        return [
+            'form',
+            'formGeral',
+        ];
+    }
 
     public function mount(): void
     {
         $this->form->fill();
+        $this->formGeral->fill();
+    }
+
+    public function filtrosAction(): Action
+    {
+        return Action::make('filtros')
+            ->label('Filtros Avançados')
+            ->icon('heroicon-o-adjustments-horizontal')
+            ->color('gray')
+            ->size('sm')
+            ->form([
+                Section::make('Filtros Adicionais')
+                    ->description('Marque os filtros adicionais que deseja utilizar no relatório.')
+                    ->schema([
+                        Checkbox::make('filtrar_nivel_ensino')
+                            ->label('Filtrar por Nível de Ensino')
+                            ->default(fn () => $this->data['filtrar_nivel_ensino'] ?? false),
+                        Checkbox::make('filtrar_ano')
+                            ->label('Filtrar por Ano/Série')
+                            ->default(fn () => $this->data['filtrar_ano'] ?? false),
+                        Checkbox::make('filtrar_turma')
+                            ->label('Filtrar por Turma')
+                            ->default(fn () => $this->data['filtrar_turma'] ?? false),
+                        Checkbox::make('filtrar_disciplina')
+                            ->label('Filtrar por Disciplina')
+                            ->default(fn () => $this->data['filtrar_disciplina'] ?? false),
+                        Checkbox::make('filtrar_professor')
+                            ->label('Filtrar por Professor')
+                            ->default(fn () => $this->data['filtrar_professor'] ?? false),
+                    ])->columns(2)
+            ])
+            ->action(function (array $data): void {
+                // Atualiza o estado do formulário com as checkboxes
+                $this->data = array_merge($this->data ?? [], $data);
+                $this->form->fill($this->data);
+            })
+            ->modalSubmitActionLabel('Aplicar Filtros')
+            ->modalCancelActionLabel('Cancelar');
     }
 
     public function form(Form $form): Form
@@ -107,42 +156,27 @@ class RelatorioRequerimentos extends Page implements HasForms
             ]);
     }
 
+    public function formGeral(Form $form): Form
+    {
+        return $form
+            ->statePath('dataGeral')
+            ->schema([
+                Group::make([
+                    DatePicker::make('data_inicial')
+                        ->label('Data Inicial')
+                        ->required()
+                        ->default(now()->startOfMonth()),
+                    DatePicker::make('data_final')
+                        ->label('Data Final')
+                        ->required()
+                        ->default(now()->endOfMonth()),
+                ])->columns(2)
+            ]);
+    }
+
     protected function getHeaderActions(): array
     {
-        return [
-            Action::make('filtros')
-                ->label('Filtros')
-                ->icon('heroicon-o-adjustments-horizontal')
-                ->color('gray')
-                ->form([
-                    Section::make('Filtros Adicionais')
-                        ->description('Marque os filtros adicionais que deseja utilizar no relatório.')
-                        ->schema([
-                            Checkbox::make('filtrar_nivel_ensino')
-                                ->label('Filtrar por Nível de Ensino')
-                                ->live(),
-                            Checkbox::make('filtrar_ano')
-                                ->label('Filtrar por Ano/Série')
-                                ->live(),
-                            Checkbox::make('filtrar_turma')
-                                ->label('Filtrar por Turma')
-                                ->live(),
-                            Checkbox::make('filtrar_disciplina')
-                                ->label('Filtrar por Disciplina')
-                                ->live(),
-                            Checkbox::make('filtrar_professor')
-                                ->label('Filtrar por Professor')
-                                ->live(),
-                        ])->columns(2)
-                ])
-                ->action(function (array $data): void {
-                    // Atualiza o estado do formulário com as checkboxes
-                    $currentData = $this->form->getState();
-                    $this->form->fill(array_merge($currentData, $data));
-                })
-                ->modalSubmitActionLabel('Aplicar Filtros')
-                ->modalCancelActionLabel('Cancelar')
-        ];
+        return [];
     }
 
     public function generateReport()
@@ -189,5 +223,104 @@ class RelatorioRequerimentos extends Page implements HasForms
         return response()->streamDownload(function () use ($pdf) {
             echo $pdf->stream();
         }, 'relatorio-requerimentos-' . now()->format('Y-m-d_H-i') . '.pdf');
+    }
+
+    public function generateRelatorioPorSerie()
+    {
+        $formDataGeral = $this->formGeral->getState();
+
+        // Validação das datas
+        if (!isset($formDataGeral['data_inicial']) || !isset($formDataGeral['data_final'])) {
+            Notification::make()
+                ->title('Erro de validação')
+                ->body('Por favor, selecione a data inicial e final.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        // Query base apenas com filtro de data
+        $query = Requerimento::query()
+            ->with(['disciplina', 'professor', 'trimestre'])
+            ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
+            ->where('data_requerimento', '<=', $formDataGeral['data_final']);
+
+        $requerimentos = $query->get();
+
+        if ($requerimentos->isEmpty()) {
+            Notification::make()
+                ->title('Nenhum requerimento encontrado')
+                ->body('Não foram encontrados requerimentos no período selecionado.')
+                ->warning()
+                ->send();
+            return;
+        }
+
+        // Agrupa por série, disciplina e professor
+        $dadosAgrupados = $requerimentos->groupBy(function ($item) {
+            return $item->ano . '|' . $item->disciplina->nome . '|' . $item->professor->nome;
+        })->map(function ($group) {
+            $primeiro = $group->first();
+            return [
+                'serie' => $primeiro->ano . 'º Ano',
+                'disciplina' => $primeiro->disciplina->nome,
+                'professor' => $primeiro->professor->nome,
+                'total_alunos' => $group->count()
+            ];
+        })->sortBy(['serie', 'disciplina']);
+
+        $pdf = Pdf::loadView('pdf.relatorio-por-serie', [
+            'dados' => $dadosAgrupados,
+            'filtros' => $formDataGeral,
+            'total_geral' => $requerimentos->count()
+        ]);
+
+        return response()->streamDownload(function () use ($pdf) {
+            echo $pdf->stream();
+        }, 'relatorio-geral-' . now()->format('Y-m-d_H-i') . '.pdf');
+    }
+
+    public function generateRelatorioCompleto()
+    {
+        $formDataGeral = $this->formGeral->getState();
+
+        // Validação das datas
+        if (!isset($formDataGeral['data_inicial']) || !isset($formDataGeral['data_final'])) {
+            Notification::make()
+                ->title('Erro de validação')
+                ->body('Por favor, selecione a data inicial e final.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        // Query base apenas com filtro de data
+        $query = Requerimento::query()
+            ->with(['disciplina', 'professor', 'trimestre'])
+            ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
+            ->where('data_requerimento', '<=', $formDataGeral['data_final'])
+            ->orderBy('ano')
+            ->orderBy('turma')
+            ->orderBy('nome_completo');
+
+        $requerimentos = $query->get();
+
+        if ($requerimentos->isEmpty()) {
+            Notification::make()
+                ->title('Nenhum requerimento encontrado')
+                ->body('Não foram encontrados requerimentos no período selecionado.')
+                ->warning()
+                ->send();
+            return;
+        }
+
+        $pdf = Pdf::loadView('pdf.relatorio-completo', [
+            'requerimentos' => $requerimentos,
+            'filtros' => $formDataGeral
+        ]);
+
+        return response()->streamDownload(function () use ($pdf) {
+            echo $pdf->stream();
+        }, 'relatorio-completo-' . now()->format('Y-m-d_H-i') . '.pdf');
     }
 }
