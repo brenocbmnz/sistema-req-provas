@@ -6,6 +6,11 @@
 @source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
 @source '../../vendor/livewire/flux/stubs/**/*.blade.php';
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
@@ -52,7 +57,7 @@
 }
 
 [data-flux-label] {
-    @apply  !mb-0 !leading-tight;
+    @apply !mb-0 !leading-tight;
 }
 
 input:focus[data-flux-control],

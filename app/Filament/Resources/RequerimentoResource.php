@@ -188,13 +188,15 @@ class RequerimentoResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                    ->requiresConfirmation()
+                    ->modalDescription(new HtmlString('Você tem certeza que gostaria de fazer isso? <div class="text-red-500 dark:text-red-400 text-xl font-semibold">Esta ação irá alterar DELETAR todos requerimentos selecionados.</div>')) ,
                     Tables\Actions\BulkAction::make('alterar_status_bulk')
                         ->label('Alterar Status')
                         ->icon('heroicon-o-pencil-square')
-                        ->color('warning')
+                        ->color('info')
                         ->requiresConfirmation()
-                        ->modalDescription(new HtmlString('Você tem certeza que gostaria de fazer isso? <div class="text-red-200"><strong>Esta ação irá alterar os status de todos os requerimentos selecionados.</strong></div>'))
+                        ->modalDescription(new HtmlString('Você tem certeza que gostaria de fazer isso? <div class="text-red-500 dark:text-red-400 text-xl font-semibold">Esta ação irá alterar os status de todos os requerimentos selecionados.</div>'))                        
                         ->form([
                             Forms\Components\Select::make('status')
                                 ->label('Novo Status')
