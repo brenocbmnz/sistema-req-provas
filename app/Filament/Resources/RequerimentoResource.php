@@ -24,6 +24,7 @@ use Filament\Notifications\Notification;
 use Illuminate\Support\HtmlString;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
+use Filament\Forms\Components\ToggleButtons;
 
 class RequerimentoResource extends Resource
 {
@@ -95,9 +96,13 @@ class RequerimentoResource extends Resource
                                     return collect();
                                 }
                                 return Professor::query()
-                                    ->whereHas('disciplinas', fn ($query) => $query->where('disciplina_id', $disciplinaId))
+                                    ->whereHas('disciplinas', function ($query) use ($disciplinaId) {
+                                        $query->where('disciplinas.id', $disciplinaId);
+                                    })
                                     ->pluck('nome', 'id');
                             })
+                            ->disabled(fn (Get $get): bool => !$get('disciplina_id'))
+                            ->helperText('Selecione primeiro uma disciplina para ver os professores disponíveis')
                             ->required(),
                         Forms\Components\DatePicker::make('data_requerimento')
                             ->default(now())
@@ -172,7 +177,6 @@ class RequerimentoResource extends Resource
                     Action::make('visualizar')
                         ->label('Visualizar')
                         ->icon('heroicon-o-eye')
-                        ->color('info')
                         ->modalHeading(fn ($record) => 'Requerimento de ' . $record->nome_completo)
                         ->modalDescription('Informações detalhadas do requerimento')
                         ->modalSubmitAction(false)
@@ -242,19 +246,29 @@ class RequerimentoResource extends Resource
                     Tables\Actions\EditAction::make(),
                     Action::make('alterar_status')
                         ->label('Alterar Status')
-                        ->icon('heroicon-o-pencil-square')
+                        ->icon('heroicon-o-sparkles')
                         ->color('info')
                         ->form([
-                            Forms\Components\Select::make('status')
-                                ->label('Novo Status')
+                                ToggleButtons::make('status')
+                                ->inline()
+                                ->grouped()
                                 ->options([
-                                    'Pendente' => 'Pendente',
-                                    'Aprovado' => 'Aprovado',
-                                    'Reprovado' => 'Reprovado',
+                                'Pendente' => 'Pendente',
+                                'Aprovado' => 'Aprovado',
+                                'Reprovado' => 'Reprovado'
+                                
+                            ])
+                                ->colors([
+                                    'Pendente' => 'warning',
+                                    'Aprovado' => 'success',
+                                    'Reprovado' => 'danger',
                                 ])
                                 ->default(fn ($record) => $record->status)
+                                ->extraAttributes(['class' => 'flex justify-center'])
                                 ->required(),
                         ])
+                        ->modalWidth('md')
+                        ->modalAlignment('center')
                         ->action(function (array $data, $record): void {
                             $record->update([
                                 'status' => $data['status']
