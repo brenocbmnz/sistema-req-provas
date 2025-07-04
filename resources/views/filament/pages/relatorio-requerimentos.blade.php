@@ -13,11 +13,11 @@
                 {{ $this->formGeral }}
 
                 <div class="mt-6 flex gap-4">
-                    <x-filament::button type="button" wire:click="generateRelatorioPorSerie" color="success">
+                    <x-filament::button type="button" wire:click="generateRelatorioPorSerie">
                         Gerar Relatório Geral
                     </x-filament::button>
 
-                    <x-filament::button type="button" wire:click="generateRelatorioCompleto" color="info">
+                    <x-filament::button type="button" wire:click="generateRelatorioCompleto">
                         Gerar Relatório Completo
                     </x-filament::button>
                 </div>

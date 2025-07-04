@@ -22,6 +22,8 @@ use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Notifications\Notification;
 use Illuminate\Support\HtmlString;
+use Filament\Infolists;
+use Filament\Infolists\Infolist;
 
 class RequerimentoResource extends Resource
 {
@@ -136,6 +138,8 @@ class RequerimentoResource extends Resource
                         'Reprovado' => 'danger',
                     }),
             ])
+            ->recordAction('visualizar')
+            ->recordUrl(null)
             ->filters([
                 SelectFilter::make('status')
                     ->options([
@@ -143,22 +147,99 @@ class RequerimentoResource extends Resource
                         'Aprovado' => 'Aprovado',
                         'Reprovado' => 'Reprovado',
                     ]),
-                Filter::make('data_requerimento')
+                Filter::make('data_range')
+                    ->label('Período de Data')
                     ->form([
-                        Forms\Components\DatePicker::make('criado_em'),
+                        Forms\Components\DatePicker::make('data_inicio')
+                            ->label('Data de Início'),
+                        Forms\Components\DatePicker::make('data_fim')
+                            ->label('Data de Fim'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
-                                $data['criado_em'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('data_requerimento', '=', $date),
+                                $data['data_inicio'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('data_requerimento', '>=', $date),
+                            )
+                            ->when(
+                                $data['data_fim'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('data_requerimento', '<=', $date),
                             );
-                    })
+                    }),
             ])
             ->actions([
                 ActionGroup::make([
+                    Action::make('visualizar')
+                        ->label('Visualizar')
+                        ->icon('heroicon-o-eye')
+                        ->color('info')
+                        ->modalHeading(fn ($record) => 'Requerimento de ' . $record->nome_completo)
+                        ->modalDescription('Informações detalhadas do requerimento')
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Fechar')
+                        ->extraModalFooterActions([
+                            Action::make('editar')
+                                ->label('Editar')
+                                ->icon('heroicon-o-pencil-square')
+                                
+                                ->url(fn ($record) => static::getUrl('edit', ['record' => $record]))
+                        ])
+                        ->infolist([
+                            \Filament\Infolists\Components\Section::make('Dados do Aluno')
+                                ->schema([
+                                    \Filament\Infolists\Components\TextEntry::make('nome_completo')
+                                        ->label('Nome Completo'),
+                                    \Filament\Infolists\Components\TextEntry::make('nivel_ensino')
+                                        ->label('Nível de Ensino')
+                                        ->formatStateUsing(fn ($state) => match($state) {
+                                            'fundamental1' => 'Ensino Fundamental I',
+                                            'fundamental2' => 'Ensino Fundamental II', 
+                                            'medio' => 'Ensino Médio',
+                                            default => $state
+                                        }),
+                                    \Filament\Infolists\Components\TextEntry::make('ano')
+                                        ->label('Ano/Série')
+                                        ->formatStateUsing(fn ($state) => $state . 'º ano'),
+                                    \Filament\Infolists\Components\TextEntry::make('turma')
+                                        ->label('Turma')
+                                        ->formatStateUsing(fn ($state) => 'Turma ' . $state),
+                                ])->columns(2),
+                            \Filament\Infolists\Components\Section::make('Dados do Requerimento')
+                                ->schema([
+                                    \Filament\Infolists\Components\TextEntry::make('trimestre.nome')
+                                        ->label('Trimestre'),
+                                    \Filament\Infolists\Components\TextEntry::make('disciplina.nome')
+                                        ->label('Disciplina'),
+                                    \Filament\Infolists\Components\TextEntry::make('professor.nome')
+                                        ->label('Professor'),
+                                    \Filament\Infolists\Components\TextEntry::make('data_requerimento')
+                                        ->label('Data do Requerimento')
+                                        ->date('d/m/Y'),
+                                    \Filament\Infolists\Components\TextEntry::make('motivo')
+                                        ->label('Motivo')
+                                        ->formatStateUsing(fn ($state) => match($state) {
+                                            'falta_prova' => 'Falta na Prova',
+                                            'problemas_saude' => 'Problemas de Saúde',
+                                            'problemas_pessoais' => 'Problemas Pessoais',
+                                            'outros' => 'Outros',
+                                            default => $state
+                                        }),
+                                    \Filament\Infolists\Components\TextEntry::make('status')
+                                        ->label('Status')
+                                        ->badge()
+                                        ->color(fn (string $state): string => match ($state) {
+                                            'Pendente' => 'warning',
+                                            'Aprovado' => 'success',
+                                            'Reprovado' => 'danger',
+                                            default => 'gray'
+                                        }),
+                                    \Filament\Infolists\Components\TextEntry::make('observacao')
+                                        ->label('Observação/Justificativa')
+                                        ->columnSpanFull()
+                                        ->visible(fn ($record) => !empty($record->observacao)),
+                                ])->columns(2),
+                        ]),
                     Tables\Actions\EditAction::make(),
-                    // CORREÇÃO AQUI: Usando Action em vez de SelectAction
                     Action::make('alterar_status')
                         ->label('Alterar Status')
                         ->icon('heroicon-o-pencil-square')
