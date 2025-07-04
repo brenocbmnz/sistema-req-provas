@@ -18,4 +18,9 @@ class Disciplina extends Model
     return $this->belongsToMany(Professor::class, 'disciplina_professor');
 }
 
+public function requerimentos()
+{
+    return $this->hasMany(Requerimento::class);
+}
+
 }

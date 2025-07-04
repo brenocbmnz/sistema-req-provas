@@ -14,4 +14,9 @@ class Trimestre extends Model
         'data_inicio',
         'data_fim',
     ];
+
+    public function requerimentos()
+    {
+        return $this->hasMany(Requerimento::class);
+    }
 }

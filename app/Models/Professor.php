@@ -17,6 +17,11 @@ public function disciplinas()
     return $this->belongsToMany(Disciplina::class, 'disciplina_professor');
 }
 
+public function requerimentos()
+{
+    return $this->hasMany(Requerimento::class);
+}
+
 }
 
 

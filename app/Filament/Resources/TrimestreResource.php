@@ -12,6 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Notifications\Notification;
 
 class TrimestreResource extends Resource
 {
@@ -46,10 +47,38 @@ public static function table(Table $table): Table
         ])
         ->actions([
             Tables\Actions\EditAction::make(),
+            Tables\Actions\DeleteAction::make()
+                ->before(function ($record, Tables\Actions\DeleteAction $action) {
+                    // Verifica se o trimestre tem requerimentos associados
+                    if ($record->requerimentos()->exists()) {
+                        Notification::make()
+                            ->title('Não é possível excluir!')
+                            ->body('Este trimestre não pode ser excluído pois possui requerimentos associados.')
+                            ->danger()
+                            ->send();
+                        
+                        $action->cancel();
+                    }
+                }),
         ])
         ->bulkActions([
             Tables\Actions\BulkActionGroup::make([
-                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\DeleteBulkAction::make()
+                    ->before(function ($records, Tables\Actions\DeleteBulkAction $action) {
+                        // Verifica se algum trimestre tem requerimentos associados
+                        foreach ($records as $record) {
+                            if ($record->requerimentos()->exists()) {
+                                Notification::make()
+                                    ->title('Não é possível excluir!')
+                                    ->body('Um ou mais trimestres selecionados possuem requerimentos associados e não podem ser excluídos.')
+                                    ->danger()
+                                    ->send();
+                                
+                                $action->cancel();
+                                return;
+                            }
+                        }
+                    }),
             ]),
         ]);
 }
