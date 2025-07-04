@@ -19,8 +19,9 @@
         th,
         td {
             border: 1px solid #333;
-            padding: 8px;
+            padding: 6px;
             text-align: left;
+            font-size: 11px;
         }
 
         th {
@@ -82,7 +83,8 @@
         <h1>Relatório Geral - Número de Alunos por Série, Disciplina e Professor</h1>
         <p>Relatório gerado em: {{ now()->format('d/m/Y H:i') }}</p>
         <p>Período: {{ \Carbon\Carbon::parse($filtros['data_inicial'])->format('d/m/Y') }} a
-            {{ \Carbon\Carbon::parse($filtros['data_final'])->format('d/m/Y') }}</p>
+            {{ \Carbon\Carbon::parse($filtros['data_final'])->format('d/m/Y') }}
+        </p>
     </div>
 
     <div class="divider">
@@ -92,6 +94,7 @@
     <table>
         <thead>
             <tr>
+                <th>Nível de Ensino</th>
                 <th>Série</th>
                 <th>Disciplina</th>
                 <th>Professor</th>
@@ -101,6 +104,7 @@
         <tbody>
             @foreach($dados as $item)
                 <tr>
+                    <td>{{ $item['nivel_ensino'] }}</td>
                     <td>{{ $item['serie'] }}</td>
                     <td>{{ $item['disciplina'] }}</td>
                     <td>{{ $item['professor'] }}</td>
@@ -108,7 +112,7 @@
                 </tr>
             @endforeach
             <tr class="total-row">
-                <td colspan="3" style="text-align: right;"><strong>TOTAL GERAL:</strong></td>
+                <td colspan="4" style="text-align: right;"><strong>TOTAL GERAL:</strong></td>
                 <td style="text-align: center;"><strong>{{ $total_geral }}</strong></td>
             </tr>
         </tbody>

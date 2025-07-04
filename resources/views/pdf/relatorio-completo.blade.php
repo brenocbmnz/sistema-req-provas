@@ -84,7 +84,8 @@
         <h1>Relatório Completo - 2ª Chamada</h1>
         <p>Relatório gerado em: {{ now()->format('d/m/Y H:i') }}</p>
         <p>Período: {{ \Carbon\Carbon::parse($filtros['data_inicial'])->format('d/m/Y') }} a
-            {{ \Carbon\Carbon::parse($filtros['data_final'])->format('d/m/Y') }}</p>
+            {{ \Carbon\Carbon::parse($filtros['data_final'])->format('d/m/Y') }}
+        </p>
     </div>
 
     @foreach($requerimentos as $index => $req)
@@ -99,7 +100,15 @@
 
             <div class="requerimento-content">
                 <div class="aluno-info">
-                    Aluno: {{ $req->nome_completo }} {{ $req->ano }}º Ano {{ $req->turma }}
+                    @php
+                        $nivelEnsino = match ($req->nivel_ensino) {
+                            'fundamental1' => 'Ensino Fundamental I',
+                            'fundamental2' => 'Ensino Fundamental II',
+                            'medio' => 'Ensino Médio',
+                            default => $req->nivel_ensino
+                        };
+                    @endphp
+                    Aluno: {{ $req->nome_completo }} - {{ $nivelEnsino }} - {{ $req->ano }}º Ano {{ $req->turma }}
                 </div>
 
                 <div class="disciplina-info">

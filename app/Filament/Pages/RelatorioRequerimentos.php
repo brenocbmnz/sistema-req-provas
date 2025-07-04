@@ -258,16 +258,23 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         // Agrupa por série, disciplina e professor
         $dadosAgrupados = $requerimentos->groupBy(function ($item) {
-            return $item->ano . '|' . $item->disciplina->nome . '|' . $item->professor->nome;
+            return $item->nivel_ensino . '|' . $item->ano . '|' . $item->disciplina->nome . '|' . $item->professor->nome;
         })->map(function ($group) {
             $primeiro = $group->first();
+            $nivelEnsino = match($primeiro->nivel_ensino) {
+                'fundamental1' => 'Ensino Fundamental I',
+                'fundamental2' => 'Ensino Fundamental II', 
+                'medio' => 'Ensino Médio',
+                default => $primeiro->nivel_ensino
+            };
             return [
+                'nivel_ensino' => $nivelEnsino,
                 'serie' => $primeiro->ano . 'º Ano',
                 'disciplina' => $primeiro->disciplina->nome,
                 'professor' => $primeiro->professor->nome,
                 'total_alunos' => $group->count()
             ];
-        })->sortBy(['serie', 'disciplina']);
+        })->sortBy(['nivel_ensino', 'serie', 'disciplina']);
 
         $pdf = Pdf::loadView('pdf.relatorio-por-serie', [
             'dados' => $dadosAgrupados,

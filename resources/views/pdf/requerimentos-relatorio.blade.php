@@ -47,7 +47,7 @@
         <thead>
             <tr>
                 <th>Aluno</th>
-                <th>Série/Turma</th>
+                <th>Nível/Série/Turma</th>
                 <th>Disciplina</th>
                 <th>Professor</th>
                 <th>Data</th>
@@ -58,7 +58,17 @@
             @forelse($requerimentos as $req)
                 <tr>
                     <td>{{ $req->nome_completo }}</td>
-                    <td>{{ $req->ano }}º Ano - Turma {{ $req->turma }}</td>
+                    <td>
+                        @php
+                            $nivelEnsino = match ($req->nivel_ensino) {
+                                'fundamental1' => 'Fund. I',
+                                'fundamental2' => 'Fund. II',
+                                'medio' => 'Médio',
+                                default => $req->nivel_ensino
+                            };
+                        @endphp
+                        {{ $nivelEnsino }} - {{ $req->ano }}º Ano - Turma {{ $req->turma }}
+                    </td>
                     <td>{{ $req->disciplina->nome ?? 'N/A' }}</td>
                     <td>{{ $req->professor->nome ?? 'N/A' }}</td>
                     <td>{{ \Carbon\Carbon::parse($req->data_requerimento)->format('d/m/Y') }}</td>
