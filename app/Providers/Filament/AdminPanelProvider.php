@@ -26,7 +26,8 @@ class AdminPanelProvider extends PanelProvider
             ->default() // É uma boa prática marcar o painel principal como padrão
             ->id('admin')
             ->path('admin')
-            ->login() // Adiciona a rota de login padrão
+            ->login()
+            ->registration()
             ->brandLogo(asset('images/saobentologo.svg'))
             ->brandLogoHeight('3rem')
             ->colors([
