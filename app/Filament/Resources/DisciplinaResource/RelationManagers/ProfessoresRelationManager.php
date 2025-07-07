@@ -5,12 +5,16 @@ namespace App\Filament\Resources\DisciplinaResource\RelationManagers;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Forms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Models\Professor;
 
 class ProfessoresRelationManager extends RelationManager
 {
     protected static string $relationship = 'professores';
+
+    protected static bool $isLazy = false;
 
     public function table(Table $table): Table
     {
@@ -24,7 +28,9 @@ class ProfessoresRelationManager extends RelationManager
             ])
             ->headerActions([
                 // Botão para associar um professor que já existe
-                Tables\Actions\AttachAction::make(),
+                Tables\Actions\AttachAction::make()
+                    ->recordSelectOptionsQuery(fn (Builder $query) => $query->orderBy('nome'))
+                    ->preloadRecordSelect(),
             ])
             ->actions([
                 // Botão para desassociar o professor desta disciplina
