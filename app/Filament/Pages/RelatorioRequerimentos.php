@@ -104,6 +104,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                                     'Pendente' => 'Pendente',
                                     'Aprovado' => 'Aprovado',
                                     'Reprovado' => 'Reprovado',
+                                    'Concluído' => 'Concluído',
                                 ])
                                 ->placeholder('Todos os status'),
                             Select::make('trimestre_id')
@@ -170,7 +171,34 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         ->label('Data Final')
                         ->required()
                         ->default(now()->endOfMonth()),
-                ])->columns(2)
+                ])->columns(2),
+                
+                Section::make('Opções de Ordenação')
+                    ->description('Escolha como deseja organizar os dados no relatório geral.')
+                    ->schema([
+                        Select::make('ordenacao')
+                            ->label('Ordenar por')
+                            ->options([
+                                'nivel' => 'Nível de Ensino',
+                                'turma' => 'Turma',
+                                'disciplina' => 'Disciplina',
+                                'professor' => 'Professor',
+                                'aluno' => 'Nome do Aluno',
+                                'data' => 'Data do Requerimento',
+                            ])
+                            ->default('nivel')
+                            ->required()
+                            ->helperText('Selecione o campo principal para ordenação dos dados no relatório.'),
+                        
+                        Select::make('direcao_ordenacao')
+                            ->label('Direção da Ordenação')
+                            ->options([
+                                'asc' => 'Crescente (A-Z / 1-9)',
+                                'desc' => 'Decrescente (Z-A / 9-1)',
+                            ])
+                            ->default('asc')
+                            ->required(),
+                    ])->columns(2),
             ]);
     }
 
@@ -239,11 +267,17 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             return;
         }
 
-        // Query base apenas com filtro de data
+        // Query base com filtro de data e aplicação da ordenação
         $query = Requerimento::query()
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
             ->where('data_requerimento', '<=', $formDataGeral['data_final']);
+
+        // Aplicar ordenação baseada na seleção do usuário
+        $ordenacao = $formDataGeral['ordenacao'] ?? 'nivel';
+        $direcao = $formDataGeral['direcao_ordenacao'] ?? 'asc';
+
+        $query = $this->aplicarOrdenacao($query, $ordenacao, $direcao);
 
         $requerimentos = $query->get();
 
@@ -256,35 +290,94 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             return;
         }
 
-        // Agrupa por série, disciplina e professor
+        // Agrupa por série, disciplina e professor, mantendo a ordenação
         $dadosAgrupados = $requerimentos->groupBy(function ($item) {
             return $item->nivel_ensino . '|' . $item->ano . '|' . $item->disciplina->nome . '|' . $item->professor->nome;
         })->map(function ($group) {
             $primeiro = $group->first();
             $nivelEnsino = match($primeiro->nivel_ensino) {
-                'fundamental1' => 'Ensino Fundamental I',
-                'fundamental2' => 'Ensino Fundamental II', 
-                'medio' => 'Ensino Médio',
+                'Fundamental I' => 'Ensino Fundamental I',
+                'Fundamental II' => 'Ensino Fundamental II', 
+                'Ensino Médio' => 'Ensino Médio',
                 default => $primeiro->nivel_ensino
             };
             return [
                 'nivel_ensino' => $nivelEnsino,
-                'serie' => $primeiro->ano . 'º Ano',
+                'serie' => $primeiro->nivel_ensino === 'Ensino Médio' 
+                    ? $primeiro->ano . 'ª Série' 
+                    : $primeiro->ano . 'º Ano',
                 'disciplina' => $primeiro->disciplina->nome,
                 'professor' => $primeiro->professor->nome,
-                'total_alunos' => $group->count()
+                'total_alunos' => $group->count(),
+                'requerimentos' => $group // Adiciona os requerimentos para ordenação detalhada
             ];
-        })->sortBy(['nivel_ensino', 'serie', 'disciplina']);
+        });
+
+        // Aplicar ordenação final nos dados agrupados
+        switch ($ordenacao) {
+            case 'disciplina':
+                $dadosAgrupados = $direcao === 'asc' 
+                    ? $dadosAgrupados->sortBy('disciplina') 
+                    : $dadosAgrupados->sortByDesc('disciplina');
+                break;
+            case 'professor':
+                $dadosAgrupados = $direcao === 'asc' 
+                    ? $dadosAgrupados->sortBy('professor') 
+                    : $dadosAgrupados->sortByDesc('professor');
+                break;
+            case 'turma':
+                $dadosAgrupados = $dadosAgrupados->sort(function ($a, $b) use ($direcao) {
+                    $comparison = strcmp($a['requerimentos']->first()->turma, $b['requerimentos']->first()->turma);
+                    return $direcao === 'asc' ? $comparison : -$comparison;
+                });
+                break;
+            default:
+                // Ordenação customizada que coloca Ensino Médio por último
+                $dadosAgrupados = $dadosAgrupados->sort(function ($a, $b) {
+                    // Definir prioridade para níveis de ensino
+                    $nivelPrioridade = [
+                        'Ensino Fundamental I' => 1,
+                        'Ensino Fundamental II' => 2,
+                        'Ensino Médio' => 3
+                    ];
+                    
+                    $nivelA = $a['requerimentos']->first()->nivel_ensino;
+                    $nivelB = $b['requerimentos']->first()->nivel_ensino;
+                    
+                    $prioridadeA = $nivelPrioridade[$nivelA] ?? 4;
+                    $prioridadeB = $nivelPrioridade[$nivelB] ?? 4;
+                    
+                    // Primeiro compara por nível de ensino
+                    if ($prioridadeA !== $prioridadeB) {
+                        return $prioridadeA <=> $prioridadeB;
+                    }
+                    
+                    // Depois compara por série/ano
+                    $anoA = $a['requerimentos']->first()->ano;
+                    $anoB = $b['requerimentos']->first()->ano;
+                    if ($anoA !== $anoB) {
+                        return $anoA <=> $anoB;
+                    }
+                    
+                    // Por último compara por disciplina
+                    return strcmp($a['disciplina'], $b['disciplina']);
+                });
+        }
 
         $pdf = Pdf::loadView('pdf.relatorio-por-serie', [
             'dados' => $dadosAgrupados,
             'filtros' => $formDataGeral,
-            'total_geral' => $requerimentos->count()
+            'total_geral' => $requerimentos->count(),
+            'ordenacao_info' => [
+                'campo' => $ordenacao,
+                'direcao' => $direcao,
+                'campo_nome' => $this->obterNomeCampoOrdenacao($ordenacao)
+            ]
         ]);
 
         return response()->streamDownload(function () use ($pdf) {
             echo $pdf->stream();
-        }, 'relatorio-geral-' . now()->format('Y-m-d_H-i') . '.pdf');
+        }, 'relatorio-geral-ordenado-' . now()->format('Y-m-d_H-i') . '.pdf');
     }
 
     public function generateRelatorioCompleto()
@@ -301,14 +394,17 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             return;
         }
 
-        // Query base apenas com filtro de data
+        // Query base com filtro de data
         $query = Requerimento::query()
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
-            ->where('data_requerimento', '<=', $formDataGeral['data_final'])
-            ->orderBy('ano')
-            ->orderBy('turma')
-            ->orderBy('nome_completo');
+            ->where('data_requerimento', '<=', $formDataGeral['data_final']);
+
+        // Aplicar ordenação baseada na seleção do usuário
+        $ordenacao = $formDataGeral['ordenacao'] ?? 'nivel';
+        $direcao = $formDataGeral['direcao_ordenacao'] ?? 'asc';
+
+        $query = $this->aplicarOrdenacao($query, $ordenacao, $direcao);
 
         $requerimentos = $query->get();
 
@@ -323,11 +419,122 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         $pdf = Pdf::loadView('pdf.relatorio-completo', [
             'requerimentos' => $requerimentos,
-            'filtros' => $formDataGeral
+            'filtros' => $formDataGeral,
+            'ordenacao_info' => [
+                'campo' => $ordenacao,
+                'direcao' => $direcao,
+                'campo_nome' => $this->obterNomeCampoOrdenacao($ordenacao),
+                'direcao_nome' => $direcao === 'asc' ? 'Crescente' : 'Decrescente'
+            ]
         ]);
 
         return response()->streamDownload(function () use ($pdf) {
             echo $pdf->stream();
-        }, 'relatorio-completo-' . now()->format('Y-m-d_H-i') . '.pdf');
+        }, 'relatorio-completo-ordenado-' . now()->format('Y-m-d_H-i') . '.pdf');
+    }
+
+    private function aplicarOrdenacao($query, $ordenacao, $direcao)
+    {
+        switch ($ordenacao) {
+            case 'nivel':
+                // Ordenação customizada para nível de ensino: Fundamental I, Fundamental II, Ensino Médio
+                $ordenacaoNivel = $direcao === 'asc' ? 'ASC' : 'DESC';
+                return $query->orderByRaw("
+                    CASE nivel_ensino 
+                        WHEN 'Fundamental I' THEN 1
+                        WHEN 'Fundamental II' THEN 2
+                        WHEN 'Ensino Médio' THEN 3
+                        ELSE 4
+                    END {$ordenacaoNivel}
+                ")
+                ->orderBy('ano', $direcao)
+                ->orderBy('turma', $direcao)
+                ->orderBy('nome_completo', 'asc');
+                
+            case 'turma':
+                return $query->orderBy('turma', $direcao)
+                            ->orderBy('ano', $direcao)
+                            ->orderByRaw("
+                                CASE nivel_ensino 
+                                    WHEN 'Fundamental I' THEN 1
+                                    WHEN 'Fundamental II' THEN 2
+                                    WHEN 'Ensino Médio' THEN 3
+                                    ELSE 4
+                                END ASC
+                            ")
+                            ->orderBy('nome_completo', 'asc');
+                
+            case 'disciplina':
+                return $query->join('disciplinas', 'requerimentos.disciplina_id', '=', 'disciplinas.id')
+                            ->orderBy('disciplinas.nome', $direcao)
+                            ->orderByRaw("
+                                CASE nivel_ensino 
+                                    WHEN 'Fundamental I' THEN 1
+                                    WHEN 'Fundamental II' THEN 2
+                                    WHEN 'Ensino Médio' THEN 3
+                                    ELSE 4
+                                END ASC
+                            ")
+                            ->orderBy('ano', $direcao)
+                            ->orderBy('nome_completo', 'asc')
+                            ->select('requerimentos.*');
+                
+            case 'professor':
+                return $query->join('professors', 'requerimentos.professor_id', '=', 'professors.id')
+                            ->orderBy('professors.nome', $direcao)
+                            ->orderByRaw("
+                                CASE nivel_ensino 
+                                    WHEN 'Fundamental I' THEN 1
+                                    WHEN 'Fundamental II' THEN 2
+                                    WHEN 'Ensino Médio' THEN 3
+                                    ELSE 4
+                                END ASC
+                            ")
+                            ->orderBy('ano', $direcao)
+                            ->orderBy('nome_completo', 'asc')
+                            ->select('requerimentos.*');
+                
+            case 'aluno':
+                return $query->orderBy('nome_completo', $direcao)
+                            ->orderByRaw("
+                                CASE nivel_ensino 
+                                    WHEN 'Fundamental I' THEN 1
+                                    WHEN 'Fundamental II' THEN 2
+                                    WHEN 'Ensino Médio' THEN 3
+                                    ELSE 4
+                                END ASC
+                            ")
+                            ->orderBy('ano', 'asc');
+                
+            case 'data':
+                return $query->orderBy('data_requerimento', $direcao)
+                            ->orderBy('nome_completo', 'asc');
+                
+            default:
+                return $query->orderByRaw("
+                    CASE nivel_ensino 
+                        WHEN 'Fundamental I' THEN 1
+                        WHEN 'Fundamental II' THEN 2
+                        WHEN 'Ensino Médio' THEN 3
+                        ELSE 4
+                    END ASC
+                ")
+                ->orderBy('ano', 'asc')
+                ->orderBy('turma', 'asc')
+                ->orderBy('nome_completo', 'asc');
+        }
+    }
+
+    private function obterNomeCampoOrdenacao($ordenacao)
+    {
+        return match($ordenacao) {
+            'nivel' => 'Nível de Ensino',
+            'turma' => 'Turma',
+            'disciplina' => 'Disciplina',
+            'professor' => 'Professor',
+            'aluno' => 'Nome do Aluno',
+            'data' => 'Data do Requerimento',
+            default => 'Nível de Ensino'
+        };
     }
 }

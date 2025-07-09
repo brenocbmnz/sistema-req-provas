@@ -6,18 +6,21 @@
                 Relatórios Gerais por Período
             </h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Selecione o período para gerar os relatórios gerais de 2ª chamada.
+                Selecione o período e a forma de ordenação para gerar os relatórios gerais de requerimentos.
+                Você pode organizar os dados por <strong>Nível de Ensino</strong>, <strong>Turma</strong>,
+                <strong>Disciplina</strong>, <strong>Professor</strong>, <strong>Nome do Aluno</strong> ou
+                <strong>Data</strong>.
             </p>
 
             <form wire:submit.prevent="generateRelatoriosGerais">
                 {{ $this->formGeral }}
 
-                <div class="mt-6 flex gap-4">
-                    <x-filament::button type="button" wire:click="generateRelatorioPorSerie">
+                <div class="mt-6 flex gap-4 flex-wrap">
+                    <x-filament::button type="button" wire:click="generateRelatorioPorSerie" color="primary">
                         Gerar Relatório Geral
                     </x-filament::button>
 
-                    <x-filament::button type="button" wire:click="generateRelatorioCompleto">
+                    <x-filament::button type="button" wire:click="generateRelatorioCompleto" color="primary">
                         Gerar Relatório Completo
                     </x-filament::button>
                 </div>

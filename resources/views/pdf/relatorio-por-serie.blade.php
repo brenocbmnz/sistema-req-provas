@@ -85,46 +85,48 @@
         <p>Período: {{ \Carbon\Carbon::parse($filtros['data_inicial'])->format('d/m/Y') }} a
             {{ \Carbon\Carbon::parse($filtros['data_final'])->format('d/m/Y') }}
         </p>
+        @if(isset($ordenacao_info))
+            <p><strong>Ordenação:</strong> {{ $ordenacao_info['campo_nome'] }}
+                ({{ $ordenacao_info['direcao'] === 'asc' ? 'Crescente' : 'Decrescente' }})</p>
+        @endif
     </div>
 
     <div class="divider">
-        **************************************************************
-    </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Nível de Ensino</th>
-                <th>Série</th>
-                <th>Disciplina</th>
-                <th>Professor</th>
-                <th>Alunos Inscritos</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($dados as $item)
+        <table>
+            <thead>
                 <tr>
-                    <td>{{ $item['nivel_ensino'] }}</td>
-                    <td>{{ $item['serie'] }}</td>
-                    <td>{{ $item['disciplina'] }}</td>
-                    <td>{{ $item['professor'] }}</td>
-                    <td style="text-align: center;">{{ $item['total_alunos'] }}</td>
+                    <th>Nível de Ensino</th>
+                    <th>Série</th>
+                    <th>Disciplina</th>
+                    <th>Professor</th>
+                    <th>Alunos Inscritos</th>
                 </tr>
-            @endforeach
-            <tr class="total-row">
-                <td colspan="4" style="text-align: right;"><strong>TOTAL GERAL:</strong></td>
-                <td style="text-align: center;"><strong>{{ $total_geral }}</strong></td>
-            </tr>
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach($dados as $item)
+                    <tr>
+                        <td>{{ $item['nivel_ensino'] }}</td>
+                        <td>{{ $item['serie'] }}</td>
+                        <td>{{ $item['disciplina'] }}</td>
+                        <td>{{ $item['professor'] }}</td>
+                        <td style="text-align: center;">{{ $item['total_alunos'] }}</td>
+                    </tr>
+                @endforeach
+                <tr class="total-row">
+                    <td colspan="4" style="text-align: right;"><strong>TOTAL GERAL:</strong></td>
+                    <td style="text-align: center;"><strong>{{ $total_geral }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
 
-    <div class="summary">
-        Total de solicitações de 2ª chamada: {{ $total_geral }}
-    </div>
+        <div class="summary">
+            Total de solicitações de 2ª chamada: {{ $total_geral }}
+        </div>
 
-    <div class="footer">
-        Página <span class="page-number"></span> - Sistema de Requerimentos de Provas
-    </div>
+        <div class="footer">
+            Página <span class="page-number"></span> - Sistema de Requerimentos de Provas
+        </div>
 </body>
 
 </html>

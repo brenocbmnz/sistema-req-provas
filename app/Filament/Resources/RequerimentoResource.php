@@ -200,14 +200,16 @@ class RequerimentoResource extends Resource
                                     \Filament\Infolists\Components\TextEntry::make('nivel_ensino')
                                         ->label('Nível de Ensino')
                                         ->formatStateUsing(fn ($state) => match($state) {
-                                            'fundamental1' => 'Ensino Fundamental I',
-                                            'fundamental2' => 'Ensino Fundamental II', 
-                                            'medio' => 'Ensino Médio',
+                                            'Fundamental I' => 'Ensino Fundamental I',
+                                            'Fundamental II' => 'Ensino Fundamental II', 
+                                            'Ensino Médio' => 'Ensino Médio',
                                             default => $state
                                         }),
                                     \Filament\Infolists\Components\TextEntry::make('ano')
                                         ->label('Ano/Série')
-                                        ->formatStateUsing(fn ($state) => $state . 'º ano'),
+                                        ->formatStateUsing(fn ($state, $record) => $record->nivel_ensino === 'Ensino Médio' 
+                                            ? $state . 'ª Série' 
+                                            : $state . 'º Ano'),
                                     \Filament\Infolists\Components\TextEntry::make('turma')
                                         ->label('Turma')
                                         ->formatStateUsing(fn ($state) => 'Turma ' . $state),

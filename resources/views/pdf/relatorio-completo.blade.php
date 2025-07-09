@@ -50,9 +50,9 @@
 
         .divider {
             text-align: center;
-            margin: 15px 0;
             font-size: 14px;
             font-weight: bold;
+            margin-top: 20px;
         }
 
         .aluno-info {
@@ -86,10 +86,14 @@
         <p>Período: {{ \Carbon\Carbon::parse($filtros['data_inicial'])->format('d/m/Y') }} a
             {{ \Carbon\Carbon::parse($filtros['data_final'])->format('d/m/Y') }}
         </p>
+        @if(isset($ordenacao_info))
+            <p><strong>Ordenação:</strong> {{ $ordenacao_info['campo_nome'] }}
+                ({{ $ordenacao_info['direcao_nome'] }})</p>
+        @endif
     </div>
 
     @foreach($requerimentos as $index => $req)
-        @if($index > 0 && $index % 3 == 0)
+        @if($index > 0 && $index % 5 == 0)
             <div class="page-break"></div>
         @endif
 
@@ -102,18 +106,26 @@
                 <div class="aluno-info">
                     @php
                         $nivelEnsino = match ($req->nivel_ensino) {
-                            'fundamental1' => 'Ensino Fundamental I',
-                            'fundamental2' => 'Ensino Fundamental II',
-                            'medio' => 'Ensino Médio',
+                            'Fundamental I' => 'Ensino Fundamental I',
+                            'Fundamental II' => 'Ensino Fundamental II',
+                            'Ensino Médio' => 'Ensino Médio',
                             default => $req->nivel_ensino
                         };
+                        $anoSerie = $req->nivel_ensino === 'Ensino Médio'
+                            ? $req->ano . 'ª Série'
+                            : $req->ano . 'º Ano';
                     @endphp
-                    Aluno: {{ $req->nome_completo }} - {{ $nivelEnsino }} - {{ $req->ano }}º Ano {{ $req->turma }}
+                    Aluno: {{ $req->nome_completo }} - {{ $nivelEnsino }} - {{ $anoSerie }} {{ $req->turma }}
                 </div>
 
                 <div class="disciplina-info">
                     Disciplina: {{ $req->disciplina->nome ?? 'N/A' }}
+                    |
                     Professor(a): {{ $req->professor->nome ?? 'N/A' }}
+                </div>
+
+                <div class="disciplina-info">
+                    <strong>Motivo:</strong> {{ $req->motivo ?? 'N/A' }}
                 </div>
 
                 @if($req->observacao)
@@ -122,16 +134,11 @@
                     </div>
                 @endif
 
-                <div style="margin-top: 10px; font-size: 10px; color: #666;">
-                    <strong>Data da solicitação:</strong>
-                    {{ \Carbon\Carbon::parse($req->data_requerimento)->format('d/m/Y') }}
-                    | <strong>Status:</strong> {{ $req->status }}
-                </div>
+
             </div>
         </div>
 
         <div class="divider">
-            **************************************************************
         </div>
     @endforeach
 

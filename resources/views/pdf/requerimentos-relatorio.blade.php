@@ -61,13 +61,16 @@
                     <td>
                         @php
                             $nivelEnsino = match ($req->nivel_ensino) {
-                                'fundamental1' => 'Fund. I',
-                                'fundamental2' => 'Fund. II',
-                                'medio' => 'Médio',
+                                'Fundamental I' => 'Fund. I',
+                                'Fundamental II' => 'Fund. II',
+                                'Ensino Médio' => 'Médio',
                                 default => $req->nivel_ensino
                             };
+                            $anoSerie = $req->nivel_ensino === 'Ensino Médio'
+                                ? $req->ano . 'ª Série'
+                                : $req->ano . 'º Ano';
                         @endphp
-                        {{ $nivelEnsino }} - {{ $req->ano }}º Ano - Turma {{ $req->turma }}
+                        {{ $nivelEnsino }} - {{ $anoSerie }} - Turma {{ $req->turma }}
                     </td>
                     <td>{{ $req->disciplina->nome ?? 'N/A' }}</td>
                     <td>{{ $req->professor->nome ?? 'N/A' }}</td>

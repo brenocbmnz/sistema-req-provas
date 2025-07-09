@@ -30,6 +30,7 @@ class UltimosRequerimentos extends BaseWidget
                         'Pendente' => 'warning',
                         'Aprovado' => 'success',
                         'Reprovado' => 'danger',
+                        'Concluído' => 'info',
                         default => 'gray',
                     }),
             ]);
