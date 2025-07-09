@@ -11,9 +11,12 @@ class RequerimentosStats extends BaseWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Total de Requerimentos', Requerimento::count()),
-            Stat::make('Requerimentos Pendentes', Requerimento::where('status', 'Pendente')->count()),
-            Stat::make('Requerimentos Aprovados', Requerimento::where('status', 'Aprovado')->count()),
+            Stat::make('Total de Requerimentos', Requerimento::count())
+                ->color('gray'),
+            Stat::make('Requerimentos Aprovados', Requerimento::where('status', 'Aprovado')->count())
+                ->color('success'),
+            Stat::make('Requerimentos Concluídos', Requerimento::where('status', 'Concluído')->count())
+                ->color('info'),
         ];
     }
 }

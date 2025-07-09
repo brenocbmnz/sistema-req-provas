@@ -315,6 +315,39 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         // Aplicar ordenação final nos dados agrupados
         switch ($ordenacao) {
+            case 'nivel':
+                // Ordenação customizada por nível de ensino: Fundamental I, Fundamental II, Ensino Médio
+                $dadosAgrupados = $dadosAgrupados->sort(function ($a, $b) use ($direcao) {
+                    $nivelPrioridade = [
+                        'Fundamental I' => 1,
+                        'Fundamental II' => 2,
+                        'Ensino Médio' => 3
+                    ];
+                    
+                    $nivelA = $a['requerimentos']->first()->nivel_ensino;
+                    $nivelB = $b['requerimentos']->first()->nivel_ensino;
+                    
+                    $prioridadeA = $nivelPrioridade[$nivelA] ?? 4;
+                    $prioridadeB = $nivelPrioridade[$nivelB] ?? 4;
+                    
+                    // Primeiro compara por nível de ensino
+                    $comparison = $prioridadeA <=> $prioridadeB;
+                    if ($comparison !== 0) {
+                        return $direcao === 'asc' ? $comparison : -$comparison;
+                    }
+                    
+                    // Depois compara por série/ano
+                    $anoA = $a['requerimentos']->first()->ano;
+                    $anoB = $b['requerimentos']->first()->ano;
+                    if ($anoA !== $anoB) {
+                        $anoComparison = $anoA <=> $anoB;
+                        return $direcao === 'asc' ? $anoComparison : -$anoComparison;
+                    }
+                    
+                    // Por último compara por disciplina
+                    return strcmp($a['disciplina'], $b['disciplina']);
+                });
+                break;
             case 'disciplina':
                 $dadosAgrupados = $direcao === 'asc' 
                     ? $dadosAgrupados->sortBy('disciplina') 
@@ -336,8 +369,8 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 $dadosAgrupados = $dadosAgrupados->sort(function ($a, $b) {
                     // Definir prioridade para níveis de ensino
                     $nivelPrioridade = [
-                        'Ensino Fundamental I' => 1,
-                        'Ensino Fundamental II' => 2,
+                        'Fundamental I' => 1,
+                        'Fundamental II' => 2,
                         'Ensino Médio' => 3
                     ];
                     

@@ -97,7 +97,7 @@
             <thead>
                 <tr>
                     <th>Nível de Ensino</th>
-                    <th>Série</th>
+                    <th>Turma</th>
                     <th>Disciplina</th>
                     <th>Professor</th>
                     <th>Alunos Inscritos</th>
