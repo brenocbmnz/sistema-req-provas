@@ -40,7 +40,8 @@ public static function form(Form $form): Form
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('nome')
-                ->searchable(),
+                ->searchable()
+                ->sortable(),
                 Tables\Columns\TextColumn::make('professores_count')
                     ->label('Professores')
                     ->counts('professores')

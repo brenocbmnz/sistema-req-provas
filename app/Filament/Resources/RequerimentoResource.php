@@ -132,11 +132,12 @@ class RequerimentoResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('nome_completo')->label('Aluno')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('disciplina.nome')->searchable(),
-                Tables\Columns\TextColumn::make('professor.nome')->label('Professor')->searchable(),
-                Tables\Columns\TextColumn::make('data_requerimento')->date('d/m/Y'),
+                Tables\Columns\TextColumn::make('disciplina.nome')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('professor.nome')->label('Professor')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('data_requerimento')->date('d/m/Y')->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
+                    ->sortable()
                     ->color(fn (string $state): string => match ($state) {
                         'Pendente' => 'warning',
                         'Aprovado' => 'success',
