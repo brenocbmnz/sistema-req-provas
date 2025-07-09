@@ -32,6 +32,11 @@ class Requerimento extends Model
         'data_requerimento' => 'date',
     ];
 
+    // Define os valores padrão para novos registros
+    protected $attributes = [
+        'status' => 'Aprovado',
+    ];
+
     // Define as relações com os outros models
     public function aluno(): BelongsTo
     {

@@ -121,8 +121,8 @@ class RequerimentoResource extends Resource
                                 'Aprovado' => 'Aprovado',
                                 'Reprovado' => 'Reprovado',
                             ])
+                            ->default('Aprovado')
                             ->required()
-                            ->visibleOn('edit')
                     ])->columns(2),
             ]);
     }
