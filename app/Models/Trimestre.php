@@ -15,6 +15,11 @@ class Trimestre extends Model
         'data_fim',
     ];
 
+    protected $casts = [
+        'data_inicio' => 'date',
+        'data_fim' => 'date',
+    ];
+
     public function requerimentos()
     {
         return $this->hasMany(Requerimento::class);

@@ -120,6 +120,7 @@ class RequerimentoResource extends Resource
                                 'Pendente' => 'Pendente',
                                 'Aprovado' => 'Aprovado',
                                 'Reprovado' => 'Reprovado',
+                                'Concluído' => 'Concluído',
                             ])
                             ->default('Aprovado')
                             ->required()
@@ -142,6 +143,7 @@ class RequerimentoResource extends Resource
                         'Pendente' => 'warning',
                         'Aprovado' => 'success',
                         'Reprovado' => 'danger',
+                        'Concluído' => 'info',
                     }),
             ])
             ->recordAction('visualizar')
@@ -152,6 +154,7 @@ class RequerimentoResource extends Resource
                         'Pendente' => 'Pendente',
                         'Aprovado' => 'Aprovado',
                         'Reprovado' => 'Reprovado',
+                        'Concluído' => 'Concluído',
                     ]),
                 Filter::make('data_range')
                     ->label('Período de Data')
@@ -236,6 +239,7 @@ class RequerimentoResource extends Resource
                                             'Pendente' => 'warning',
                                             'Aprovado' => 'success',
                                             'Reprovado' => 'danger',
+                                            'Concluído' => 'info',
                                             default => 'gray'
                                         }),
                                     \Filament\Infolists\Components\TextEntry::make('observacao')
@@ -256,13 +260,15 @@ class RequerimentoResource extends Resource
                                 ->options([
                                 'Pendente' => 'Pendente',
                                 'Aprovado' => 'Aprovado',
-                                'Reprovado' => 'Reprovado'
+                                'Reprovado' => 'Reprovado',
+                                'Concluído' => 'Concluído'
                                 
                             ])
                                 ->colors([
                                     'Pendente' => 'warning',
                                     'Aprovado' => 'success',
                                     'Reprovado' => 'danger',
+                                    'Concluído' => 'info',
                                 ])
                                 ->default(fn ($record) => $record->status)
                                 ->extraAttributes(['class' => 'flex justify-center'])
@@ -300,6 +306,7 @@ class RequerimentoResource extends Resource
                                     'Pendente' => 'Pendente',
                                     'Aprovado' => 'Aprovado',
                                     'Reprovado' => 'Reprovado',
+                                    'Concluído' => 'Concluído',
                                 ])
                                 ->required()
                                 ->helperText('Este status será aplicado a todos os requerimentos selecionados.'),

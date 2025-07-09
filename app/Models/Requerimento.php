@@ -57,4 +57,44 @@ class Requerimento extends Model
     {
         return $this->belongsTo(Professor::class);
     }
+
+    /**
+     * Scope para requerimentos que devem ser marcados como concluídos
+     */
+    public function scopeParaConcluir($query)
+    {
+        return $query->where('status', 'Aprovado')
+            ->whereHas('trimestre', function ($query) {
+                $query->where('data_fim', '<', now()->toDateString());
+            });
+    }
+
+    /**
+     * Verifica se o requerimento deve ser marcado como concluído
+     */
+    public function deveSerConcluido(): bool
+    {
+        return $this->status === 'Aprovado' && 
+               $this->trimestre && 
+               $this->trimestre->data_fim < now()->toDateString();
+    }
+
+    /**
+     * Retorna estatísticas dos requerimentos por status
+     */
+    public static function estatisticasPorStatus(): array
+    {
+        return static::selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->toArray();
+    }
+
+    /**
+     * Conta quantos requerimentos podem ser marcados como concluídos
+     */
+    public static function contarParaConcluir(): int
+    {
+        return static::paraConcluir()->count();
+    }
 }
