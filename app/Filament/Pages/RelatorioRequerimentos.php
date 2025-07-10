@@ -111,21 +111,6 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                                 ->label('Data Final'),
                         ])->columns(2),
 
-                        // Campo de agrupamento
-                        Select::make('agrupar_por')
-                            ->label('Agrupar Relatório Por')
-                            ->options([
-                                '' => 'Sem agrupamento (lista única)',
-                                'professor' => 'Professor',
-                                'disciplina' => 'Disciplina', 
-                                'nivel_ensino' => 'Nível de Ensino',
-                                'turma' => 'Turma',
-                                'status' => 'Status',
-                                'trimestre' => 'Trimestre',
-                            ])
-                            ->placeholder('Selecione como agrupar')
-                            ->helperText('Quando selecionado, o relatório será dividido em tabelas separadas para cada grupo.'),
-
                         // Campos ocultos para controlar checkboxes
                         Group::make([
                             Checkbox::make('filtrar_nivel_ensino')->hiddenLabel()->hidden()->live(),
@@ -175,6 +160,25 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                             ->multiple()
                             ->searchable()
                             ->visible(fn (): bool => $this->getFiltrosAtivos()['filtrar_professor'] ?? false),
+                    ]),
+                
+                Section::make('Organização do Relatório')
+                    ->description('Configure como deseja organizar os dados no relatório final.')
+                    ->schema([
+                        Select::make('agrupar_por')
+                            ->label('Agrupar Relatório Por')
+                            ->options([
+                                '' => 'Sem agrupamento (lista única)',
+                                'professor' => 'Professor',
+                                'disciplina' => 'Disciplina', 
+                                'nivel_ensino' => 'Nível de Ensino',
+                                'turma' => 'Turma',
+                                'status' => 'Status',
+                                'trimestre' => 'Trimestre',
+                            ])
+                            ->placeholder('Selecione como agrupar')
+                            ->helperText('Quando selecionado, o relatório será dividido em tabelas separadas para cada grupo.')
+                            ->extraFieldWrapperAttributes(['data-field' => 'agrupar_por']),
                     ]),
             ]);
     }

@@ -35,7 +35,7 @@
 
         .header-info {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             color: #333;
         }
 
@@ -45,6 +45,10 @@
             margin: 30px 0 15px 0;
             border-left: 4px solid #2196F3;
             border-radius: 4px;
+        }
+
+        .group-section:first-child .group-header {
+            margin-top: 5px;
         }
 
         .group-title {
@@ -62,6 +66,13 @@
 
         .group-table {
             margin-bottom: 40px;
+        }
+
+        .group-section:first-child .group-table {
+            page-break-inside: auto;
+        }
+
+        .group-section:not(:first-child) .group-table {
             page-break-inside: avoid;
         }
 
@@ -138,12 +149,27 @@
 
         /* Quebra de página entre grupos */
         .group-section {
-            page-break-before: auto;
+            page-break-inside: auto;
+        }
+
+        .group-section:not(:first-child) {
+            page-break-before: always;
             page-break-inside: avoid;
         }
 
         .group-section:first-child {
             page-break-before: avoid;
+            page-break-inside: auto;
+            margin-top: 0;
+        }
+
+        /* Forçar que a primeira tabela comece na primeira página */
+        .group-section:first-child table {
+            page-break-before: avoid;
+        }
+
+        .group-section:first-child thead {
+            page-break-after: avoid;
         }
     </style>
 </head>

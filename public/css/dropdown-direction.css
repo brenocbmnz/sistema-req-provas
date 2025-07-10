@@ -1,0 +1,24 @@
+/* Estilos para dropdown que abre para cima dinamicamente */
+.dropdown-upward .choices__list--dropdown {
+    top: auto !important;
+    bottom: 100% !important;
+    margin-bottom: 4px !important;
+    margin-top: 0 !important;
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.dropdown-upward .choices__list--dropdown::before {
+    border-top: 6px solid #fff !important;
+    border-bottom: none !important;
+    top: 100% !important;
+    bottom: auto !important;
+}
+
+/* Força abertura para cima quando aplicada a classe específica */
+[data-field="agrupar_por"].dropdown-upward [data-choices] .choices__list--dropdown {
+    top: auto !important;
+    bottom: 100% !important;
+    margin-bottom: 4px !important;
+    margin-top: 0 !important;
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}

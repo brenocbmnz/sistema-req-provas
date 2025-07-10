@@ -1,4 +1,33 @@
 <x-filament-panels::page>
+    <!-- CSS personalizado para dropdown direcionado -->
+    <style>
+        /* Estilos para dropdown que abre para cima */
+        .dropdown-upward [data-choices] .choices__list--dropdown {
+            top: auto !important;
+            bottom: 100% !important;
+            margin-bottom: 4px !important;
+            margin-top: 0 !important;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+            border-radius: 6px 6px 6px 6px !important;
+        }
+
+        /* Ajuste para o tema escuro */
+        .dark .dropdown-upward [data-choices] .choices__list--dropdown {
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.3), 0 -2px 4px -1px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        /* Garantir que o dropdown específico do campo agrupar_por funcione */
+        [data-field="agrupar_por"].dropdown-upward .choices__list--dropdown,
+        [data-field-wrapper="agrupar_por"].dropdown-upward .choices__list--dropdown {
+            top: auto !important;
+            bottom: 100% !important;
+            margin-bottom: 4px !important;
+            margin-top: 0 !important;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+            border-radius: 6px 6px 6px 6px !important;
+        }
+    </style>
+
     <!-- Seção Superior - Relatórios Gerais com Filtro de Data -->
     <div class="mb-8">
         <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
@@ -99,4 +128,83 @@
             </form>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function adjustDropdownDirection() {
+                // Busca pelo campo de agrupamento usando o atributo data-field
+                const agruparPorField = document.querySelector('[data-field="agrupar_por"]');
+                if (!agruparPorField) {
+                    // Fallback: busca por campo wrapper com agrupar_por
+                    const fallbackField = document.querySelector('[data-field-wrapper="agrupar_por"]');
+                    if (fallbackField) {
+                        processField(fallbackField);
+                    }
+                    return;
+                }
+                
+                processField(agruparPorField);
+            }
+            
+            function processField(fieldElement) {
+                const choicesContainer = fieldElement.querySelector('[data-choices]');
+                if (!choicesContainer) return;
+
+                const dropdownList = choicesContainer.querySelector('.choices__list--dropdown');
+                
+                // Observer para detectar quando o dropdown é aberto
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'aria-expanded') {
+                            const isOpen = choicesContainer.getAttribute('aria-expanded') === 'true';
+                            
+                            if (isOpen && dropdownList) {
+                                // Aguardar um pouco para o dropdown ser renderizado
+                                setTimeout(() => {
+                                    // Calcular espaço disponível abaixo
+                                    const fieldRect = fieldElement.getBoundingClientRect();
+                                    const viewportHeight = window.innerHeight;
+                                    const spaceBelow = viewportHeight - fieldRect.bottom;
+                                    const dropdownHeight = 200; // Altura estimada do dropdown
+                                    
+                                    // Se não há espaço suficiente abaixo, abrir para cima
+                                    if (spaceBelow < dropdownHeight) {
+                                        fieldElement.classList.add('dropdown-upward');
+                                    } else {
+                                        fieldElement.classList.remove('dropdown-upward');
+                                    }
+                                }, 50);
+                            } else {
+                                // Remover classe quando fechado
+                                fieldElement.classList.remove('dropdown-upward');
+                            }
+                        }
+                    });
+                });
+
+                // Observar mudanças no atributo aria-expanded
+                observer.observe(choicesContainer, {
+                    attributes: true,
+                    attributeFilter: ['aria-expanded']
+                });
+
+                // Cleanup quando o componente for removido
+                window.addEventListener('beforeunload', function() {
+                    observer.disconnect();
+                });
+            }
+
+            // Executar quando a página carregar
+            adjustDropdownDirection();
+
+            // Re-executar após updates do Livewire
+            document.addEventListener('livewire:navigated', adjustDropdownDirection);
+            window.addEventListener('livewire:load', adjustDropdownDirection);
+            
+            // Para versões mais recentes do Livewire
+            if (window.Livewire) {
+                window.Livewire.hook('morph.updated', adjustDropdownDirection);
+            }
+        });
+    </script>
 </x-filament-panels::page>
