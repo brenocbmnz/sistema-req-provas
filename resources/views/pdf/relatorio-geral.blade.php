@@ -123,10 +123,6 @@
         <div class="summary">
             Total de solicitações de 2ª chamada: {{ $total_geral }}
         </div>
-
-        <div class="footer">
-            Página <span class="page-number"></span> - Sistema de Requerimentos de Provas
-        </div>
 </body>
 
 </html>

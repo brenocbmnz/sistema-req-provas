@@ -36,6 +36,17 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
     public ?array $data = [];
     public ?array $dataGeral = [];
+    
+    // Usar sessão para manter estado dos filtros
+    protected function getFiltrosAtivos(): array
+    {
+        return session('relatorio_filtros_ativos', []);
+    }
+    
+    protected function setFiltrosAtivos(array $filtros): void
+    {
+        session(['relatorio_filtros_ativos' => $filtros]);
+    }
 
     protected function getForms(): array
     {
@@ -51,41 +62,18 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         $this->formGeral->fill();
     }
 
-    public function filtrosAction(): Action
+    public function atualizarFiltros(array $filtros): void
     {
-        return Action::make('filtros')
-            ->label('Filtros Avançados')
-            ->icon('heroicon-o-adjustments-horizontal')
-            ->color('gray')
-            ->size('sm')
-            ->form([
-                Section::make('Filtros Adicionais')
-                    ->description('Marque os filtros adicionais que deseja utilizar no relatório.')
-                    ->schema([
-                        Checkbox::make('filtrar_nivel_ensino')
-                            ->label('Filtrar por Nível de Ensino')
-                            ->default(fn () => $this->data['filtrar_nivel_ensino'] ?? false),
-                        Checkbox::make('filtrar_ano')
-                            ->label('Filtrar por Ano/Série')
-                            ->default(fn () => $this->data['filtrar_ano'] ?? false),
-                        Checkbox::make('filtrar_turma')
-                            ->label('Filtrar por Turma')
-                            ->default(fn () => $this->data['filtrar_turma'] ?? false),
-                        Checkbox::make('filtrar_disciplina')
-                            ->label('Filtrar por Disciplina')
-                            ->default(fn () => $this->data['filtrar_disciplina'] ?? false),
-                        Checkbox::make('filtrar_professor')
-                            ->label('Filtrar por Professor')
-                            ->default(fn () => $this->data['filtrar_professor'] ?? false),
-                    ])->columns(2)
-            ])
-            ->action(function (array $data): void {
-                // Atualiza o estado do formulário com as checkboxes
-                $this->data = array_merge($this->data ?? [], $data);
-                $this->form->fill($this->data);
-            })
-            ->modalSubmitActionLabel('Aplicar Filtros')
-            ->modalCancelActionLabel('Cancelar');
+        // Salvar na sessão
+        $this->setFiltrosAtivos($filtros);
+        
+        // Atualizar o formulário
+        $currentData = $this->form->getState();
+        $newData = array_merge($currentData, $filtros);
+        $this->form->fill($newData);
+        
+        // Forçar re-render
+        $this->dispatch('$refresh');
     }
 
     public function form(Form $form): Form
@@ -106,11 +94,13 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                                     'Reprovado' => 'Reprovado',
                                     'Concluído' => 'Concluído',
                                 ])
-                                ->placeholder('Todos os status'),
+                                ->placeholder('Todos os status')
+                                ->multiple(),
                             Select::make('trimestre_id')
                                 ->label('Trimestre')
                                 ->options(Trimestre::all()->pluck('nome', 'id'))
                                 ->placeholder('Todos os trimestres')
+                                ->multiple()
                                 ->searchable(),
                         ])->columns(2),
 
@@ -121,39 +111,71 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                                 ->label('Data Final'),
                         ])->columns(2),
 
-                        // Filtros opcionais (condicionais)
+                        // Campo de agrupamento
+                        Select::make('agrupar_por')
+                            ->label('Agrupar Relatório Por')
+                            ->options([
+                                '' => 'Sem agrupamento (lista única)',
+                                'professor' => 'Professor',
+                                'disciplina' => 'Disciplina', 
+                                'nivel_ensino' => 'Nível de Ensino',
+                                'turma' => 'Turma',
+                                'status' => 'Status',
+                                'trimestre' => 'Trimestre',
+                            ])
+                            ->placeholder('Selecione como agrupar')
+                            ->helperText('Quando selecionado, o relatório será dividido em tabelas separadas para cada grupo.'),
+
+                        // Campos ocultos para controlar checkboxes
+                        Group::make([
+                            Checkbox::make('filtrar_nivel_ensino')->hiddenLabel()->hidden()->live(),
+                            Checkbox::make('filtrar_ano')->hiddenLabel()->hidden()->live(),
+                            Checkbox::make('filtrar_turma')->hiddenLabel()->hidden()->live(),
+                            Checkbox::make('filtrar_disciplina')->hiddenLabel()->hidden()->live(),
+                            Checkbox::make('filtrar_professor')->hiddenLabel()->hidden()->live(),
+                        ]),
+
+                        // Campos de filtro condicionais visíveis
                         Select::make('nivel_ensino')
                             ->label('Nível de Ensino')
                             ->options(NivelEnsino::class)
-                            ->placeholder('Todos os níveis')
-                            ->visible(fn (Get $get): bool => (bool) $get('filtrar_nivel_ensino')),
+                            ->placeholder('Selecione os níveis')
+                            ->multiple()
+                            ->searchable()
+                            ->visible(fn (): bool => $this->getFiltrosAtivos()['filtrar_nivel_ensino'] ?? false),
 
                         Group::make([
                             Select::make('ano')
                                 ->label('Ano/Série')
                                 ->options(array_combine(range(1, 9), range(1, 9)))
-                                ->placeholder('Todos os anos'),
+                                ->placeholder('Selecione os anos')
+                                ->multiple()
+                                ->visible(fn (): bool => $this->getFiltrosAtivos()['filtrar_ano'] ?? false),
                             Select::make('turma')
                                 ->label('Turma')
                                 ->options(array_combine(['A', 'B', 'C', 'D', 'E'], ['A', 'B', 'C', 'D', 'E']))
-                                ->placeholder('Todas as turmas'),
+                                ->placeholder('Selecione as turmas')
+                                ->multiple()
+                                ->visible(fn (): bool => $this->getFiltrosAtivos()['filtrar_turma'] ?? false),
                         ])->columns(2)
-                            ->visible(fn (Get $get): bool => (bool) $get('filtrar_ano') || (bool) $get('filtrar_turma')),
+                        ->visible(fn (): bool => ($this->getFiltrosAtivos()['filtrar_ano'] ?? false) || ($this->getFiltrosAtivos()['filtrar_turma'] ?? false)),
 
                         Select::make('disciplina_id')
                             ->label('Disciplina')
                             ->options(Disciplina::all()->pluck('nome', 'id'))
-                            ->placeholder('Todas as disciplinas')
+                            ->placeholder('Selecione as disciplinas')
+                            ->multiple()
                             ->searchable()
-                            ->visible(fn (Get $get): bool => (bool) $get('filtrar_disciplina')),
+                            ->visible(fn (): bool => $this->getFiltrosAtivos()['filtrar_disciplina'] ?? false),
 
                         Select::make('professor_id')
                             ->label('Professor')
                             ->options(Professor::all()->pluck('nome', 'id'))
-                            ->placeholder('Todos os professores')
+                            ->placeholder('Selecione os professores')
+                            ->multiple()
                             ->searchable()
-                            ->visible(fn (Get $get): bool => (bool) $get('filtrar_professor')),
-                    ])
+                            ->visible(fn (): bool => $this->getFiltrosAtivos()['filtrar_professor'] ?? false),
+                    ]),
             ]);
     }
 
@@ -207,34 +229,194 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         return [];
     }
 
+    public function filtrosAction(): Action
+    {
+        return Action::make('filtros')
+            ->label('Filtros Avançados')
+            ->icon('heroicon-o-adjustments-horizontal')
+            ->color(function () {
+                $filtros = $this->getFiltrosAtivos();
+                $hasActiveFilters = !empty($filtros['filtrar_nivel_ensino']) || 
+                                   !empty($filtros['filtrar_ano']) || 
+                                   !empty($filtros['filtrar_turma']) || 
+                                   !empty($filtros['filtrar_disciplina']) || 
+                                   !empty($filtros['filtrar_professor']);
+                return $hasActiveFilters ? 'primary' : 'gray';
+            })
+            ->badge(function () {
+                $filtros = $this->getFiltrosAtivos();
+                $count = 0;
+                if (!empty($filtros['filtrar_nivel_ensino'])) $count++;
+                if (!empty($filtros['filtrar_ano'])) $count++;
+                if (!empty($filtros['filtrar_turma'])) $count++;
+                if (!empty($filtros['filtrar_disciplina'])) $count++;
+                if (!empty($filtros['filtrar_professor'])) $count++;
+                return $count > 0 ? $count : null;
+            })
+            ->badgeColor('primary')
+            ->fillForm(function (): array {
+                $filtros = $this->getFiltrosAtivos();
+                return [
+                    'filtrar_nivel_ensino' => $filtros['filtrar_nivel_ensino'] ?? false,
+                    'filtrar_ano' => $filtros['filtrar_ano'] ?? false,
+                    'filtrar_turma' => $filtros['filtrar_turma'] ?? false,
+                    'filtrar_disciplina' => $filtros['filtrar_disciplina'] ?? false,
+                    'filtrar_professor' => $filtros['filtrar_professor'] ?? false,
+                ];
+            })
+            ->form([
+                Section::make('Selecionar Filtros Avançados')
+                    ->description('Marque os filtros que deseja utilizar. Eles aparecerão no formulário principal para preenchimento.')
+                    ->schema([
+                        Group::make([
+                            Checkbox::make('filtrar_nivel_ensino')
+                                ->label('Filtrar por Nível de Ensino')
+                                ->helperText('Fundamental I, Fundamental II, Ensino Médio'),
+                            Checkbox::make('filtrar_ano')
+                                ->label('Filtrar por Ano/Série')
+                                ->helperText('1º ao 9º ano, 1ª à 3ª série'),
+                        ])->columns(2),
+
+                        Group::make([
+                            Checkbox::make('filtrar_turma')
+                                ->label('Filtrar por Turma')
+                                ->helperText('Turmas A, B, C, D, E'),
+                            Checkbox::make('filtrar_disciplina')
+                                ->label('Filtrar por Disciplina')
+                                ->helperText('Matemática, Português, etc.'),
+                        ])->columns(2),
+
+                        Group::make([
+                            Checkbox::make('filtrar_professor')
+                                ->label('Filtrar por Professor')
+                                ->helperText('Docentes cadastrados no sistema'),
+                        ])->columns(1),
+                    ]),
+                
+
+            ])
+            ->modalWidth('2xl')
+            ->modalSubmitActionLabel('Aplicar')
+            ->modalCancelActionLabel('Cancelar')
+            ->action(function (array $data) {
+                // Atualizar os filtros ativos
+                $this->atualizarFiltros([
+                    'filtrar_nivel_ensino' => $data['filtrar_nivel_ensino'] ?? false,
+                    'filtrar_ano' => $data['filtrar_ano'] ?? false,
+                    'filtrar_turma' => $data['filtrar_turma'] ?? false,
+                    'filtrar_disciplina' => $data['filtrar_disciplina'] ?? false,
+                    'filtrar_professor' => $data['filtrar_professor'] ?? false,
+                ]);
+                
+                // Limpar campos que foram desativados
+                $currentData = $this->form->getState();
+                $newData = $currentData;
+                
+                if (!($data['filtrar_nivel_ensino'] ?? false)) {
+                    $newData['nivel_ensino'] = null;
+                }
+                if (!($data['filtrar_ano'] ?? false)) {
+                    $newData['ano'] = null;
+                }
+                if (!($data['filtrar_turma'] ?? false)) {
+                    $newData['turma'] = null;
+                }
+                if (!($data['filtrar_disciplina'] ?? false)) {
+                    $newData['disciplina_id'] = null;
+                }
+                if (!($data['filtrar_professor'] ?? false)) {
+                    $newData['professor_id'] = null;
+                }
+                
+                $this->form->fill($newData);
+                
+                $filtrosAtivos = array_filter([
+                    $data['filtrar_nivel_ensino'] ?? false ? 'Nível de Ensino' : null,
+                    $data['filtrar_ano'] ?? false ? 'Ano/Série' : null,
+                    $data['filtrar_turma'] ?? false ? 'Turma' : null,
+                    $data['filtrar_disciplina'] ?? false ? 'Disciplina' : null,
+                    $data['filtrar_professor'] ?? false ? 'Professor' : null,
+                ]);
+                
+                if (empty($filtrosAtivos)) {
+                    Notification::make()
+                        ->title('Filtros limpos!')
+                        ->body('Todos os filtros avançados foram desativados.')
+                        ->warning()
+                        ->send();
+                } else {
+                    Notification::make()
+                        ->title('Filtros configurados!')
+                        ->body('Filtros ativos: ' . implode(', ', $filtrosAtivos))
+                        ->success()
+                        ->send();
+                }
+            });
+    }
+
     public function generateReport()
     {
         $formData = $this->form->getState();
+        $filtrosAtivos = $this->getFiltrosAtivos();
 
         $query = Requerimento::query()
-            ->when(isset($formData['status']) && $formData['status'], 
-                fn ($q) => $q->where('status', $formData['status']))
-            ->when(isset($formData['trimestre_id']) && $formData['trimestre_id'], 
-                fn ($q) => $q->where('trimestre_id', $formData['trimestre_id']))
-            ->when(isset($formData['nivel_ensino']) && $formData['nivel_ensino'] && isset($formData['filtrar_nivel_ensino']) && $formData['filtrar_nivel_ensino'], 
-                fn ($q) => $q->where('nivel_ensino', $formData['nivel_ensino']))
-            ->when(isset($formData['ano']) && $formData['ano'] && isset($formData['filtrar_ano']) && $formData['filtrar_ano'], 
-                fn ($q) => $q->where('ano', $formData['ano']))
-            ->when(isset($formData['turma']) && $formData['turma'] && isset($formData['filtrar_turma']) && $formData['filtrar_turma'], 
-                fn ($q) => $q->where('turma', $formData['turma']))
-            ->when(isset($formData['disciplina_id']) && $formData['disciplina_id'] && isset($formData['filtrar_disciplina']) && $formData['filtrar_disciplina'], 
-                fn ($q) => $q->where('disciplina_id', $formData['disciplina_id']))
-            ->when(isset($formData['professor_id']) && $formData['professor_id'] && isset($formData['filtrar_professor']) && $formData['filtrar_professor'], 
-                fn ($q) => $q->where('professor_id', $formData['professor_id']))
-            ->when(isset($formData['data_inicial']) && $formData['data_inicial'], 
+            ->with(['disciplina', 'professor', 'trimestre'])
+            ->when(isset($formData['status']) && !empty($formData['status']), 
+                fn ($q) => is_array($formData['status']) 
+                    ? $q->whereIn('status', $formData['status'])
+                    : $q->where('status', $formData['status']))
+            ->when(isset($formData['trimestre_id']) && !empty($formData['trimestre_id']), 
+                fn ($q) => is_array($formData['trimestre_id']) 
+                    ? $q->whereIn('trimestre_id', $formData['trimestre_id'])
+                    : $q->where('trimestre_id', $formData['trimestre_id']))
+            ->when(
+                isset($filtrosAtivos['filtrar_nivel_ensino']) && 
+                $filtrosAtivos['filtrar_nivel_ensino'] && 
+                isset($formData['nivel_ensino']) && 
+                !empty($formData['nivel_ensino']), 
+                fn ($q) => is_array($formData['nivel_ensino']) 
+                    ? $q->whereIn('nivel_ensino', $formData['nivel_ensino'])
+                    : $q->where('nivel_ensino', $formData['nivel_ensino']))
+            ->when(
+                isset($filtrosAtivos['filtrar_ano']) && 
+                $filtrosAtivos['filtrar_ano'] && 
+                isset($formData['ano']) && 
+                !empty($formData['ano']), 
+                fn ($q) => is_array($formData['ano']) 
+                    ? $q->whereIn('ano', $formData['ano'])
+                    : $q->where('ano', $formData['ano']))
+            ->when(
+                isset($filtrosAtivos['filtrar_turma']) && 
+                $filtrosAtivos['filtrar_turma'] && 
+                isset($formData['turma']) && 
+                !empty($formData['turma']), 
+                fn ($q) => is_array($formData['turma']) 
+                    ? $q->whereIn('turma', $formData['turma'])
+                    : $q->where('turma', $formData['turma']))
+            ->when(
+                isset($filtrosAtivos['filtrar_disciplina']) && 
+                $filtrosAtivos['filtrar_disciplina'] && 
+                isset($formData['disciplina_id']) && 
+                !empty($formData['disciplina_id']), 
+                fn ($q) => is_array($formData['disciplina_id']) 
+                    ? $q->whereIn('disciplina_id', $formData['disciplina_id'])
+                    : $q->where('disciplina_id', $formData['disciplina_id']))
+            ->when(
+                isset($filtrosAtivos['filtrar_professor']) && 
+                $filtrosAtivos['filtrar_professor'] && 
+                isset($formData['professor_id']) && 
+                !empty($formData['professor_id']), 
+                fn ($q) => is_array($formData['professor_id']) 
+                    ? $q->whereIn('professor_id', $formData['professor_id'])
+                    : $q->where('professor_id', $formData['professor_id']))
+            ->when(isset($formData['data_inicial']) && !empty($formData['data_inicial']), 
                 fn ($q) => $q->where('data_requerimento', '>=', $formData['data_inicial']))
-            ->when(isset($formData['data_final']) && $formData['data_final'], 
+            ->when(isset($formData['data_final']) && !empty($formData['data_final']), 
                 fn ($q) => $q->where('data_requerimento', '<=', $formData['data_final']));
 
         $requerimentos = $query->get();
 
         if ($requerimentos->isEmpty()) {
-            // Exibir notificação quando não há dados para o relatório
             Notification::make()
                 ->title('Nenhum requerimento encontrado')
                 ->body('Não foram encontrados requerimentos para os filtros selecionados.')
@@ -243,14 +425,35 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             return;
         }
 
-        $pdf = Pdf::loadView('pdf.requerimentos-relatorio', [
-            'requerimentos' => $requerimentos,
-            'filters' => $formData
-        ]);
+        // Mesclar dados do formulário com dados da sessão para o PDF
+        $filtersForPdf = array_merge($formData, $filtrosAtivos);
 
+        // Verificar se deve agrupar
+        $agruparPor = $formData['agrupar_por'] ?? '';
+        
+        if (empty($agruparPor)) {
+            // Relatório normal sem agrupamento
+            $pdf = Pdf::loadView('pdf.requerimentos-relatorio', [
+                'requerimentos' => $requerimentos,
+                'filters' => $filtersForPdf
+            ]);
+        } else {
+            // Relatório agrupado
+            $dadosAgrupados = $this->agruparRequerimentos($requerimentos, $agruparPor);
+            
+            $pdf = Pdf::loadView('pdf.requerimentos-relatorio-agrupado', [
+                'grupos' => $dadosAgrupados,
+                'filters' => $filtersForPdf,
+                'agrupamento' => $agruparPor,
+                'titulo_agrupamento' => $this->obterTituloAgrupamento($agruparPor)
+            ]);
+        }
+
+        $tipoRelatorio = empty($agruparPor) ? 'personalizado' : 'agrupado-' . $agruparPor;
+        
         return response()->streamDownload(function () use ($pdf) {
             echo $pdf->stream();
-        }, 'relatorio-requerimentos-' . now()->format('Y-m-d_H-i') . '.pdf');
+        }, "relatorio-{$tipoRelatorio}-" . now()->format('Y-m-d_H-i') . '.pdf');
     }
 
     public function generateRelatorioPorSerie()
@@ -397,7 +600,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 });
         }
 
-        $pdf = Pdf::loadView('pdf.relatorio-por-serie', [
+        $pdf = Pdf::loadView('pdf.relatorio-geral', [
             'dados' => $dadosAgrupados,
             'filtros' => $formDataGeral,
             'total_geral' => $requerimentos->count(),
@@ -568,6 +771,40 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             'aluno' => 'Nome do Aluno',
             'data' => 'Data do Requerimento',
             default => 'Nível de Ensino'
+        };
+    }
+
+    private function agruparRequerimentos($requerimentos, $agruparPor)
+    {
+        return $requerimentos->groupBy(function ($req) use ($agruparPor) {
+            return match($agruparPor) {
+                'professor' => $req->professor->nome ?? 'Sem Professor',
+                'disciplina' => $req->disciplina->nome ?? 'Sem Disciplina',
+                'nivel_ensino' => $req->nivel_ensino,
+                'turma' => $req->nivel_ensino . ' - ' . $req->ano . ($req->nivel_ensino === 'Ensino Médio' ? 'ª Série' : 'º Ano') . ' - Turma ' . $req->turma,
+                'status' => $req->status,
+                'trimestre' => $req->trimestre->nome ?? 'Sem Trimestre',
+                default => 'Outros'
+            };
+        })->map(function ($grupo, $chave) use ($agruparPor) {
+            return [
+                'titulo' => $chave,
+                'total' => $grupo->count(),
+                'requerimentos' => $grupo->sortBy('nome_completo')
+            ];
+        })->sortBy('titulo');
+    }
+
+    private function obterTituloAgrupamento($agruparPor)
+    {
+        return match($agruparPor) {
+            'professor' => 'Professor',
+            'disciplina' => 'Disciplina',
+            'nivel_ensino' => 'Nível de Ensino',
+            'turma' => 'Turma',
+            'status' => 'Status',
+            'trimestre' => 'Trimestre',
+            default => 'Grupo'
         };
     }
 }

@@ -9,6 +9,6 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Agenda a atualização automática dos status dos requerimentos
-Schedule::command('requerimentos:atualizar-status')
+Schedule::command('requerimentos:atualizar-concluidos')
     ->daily()
     ->description('Atualiza status dos requerimentos para "Concluído" quando o trimestre terminar');

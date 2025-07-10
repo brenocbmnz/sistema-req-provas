@@ -179,7 +179,7 @@
                     </div>
 
                     <div class="disciplina-info">
-                        <strong>Ensino:</strong> {{ $nivelEnsino }} - {{ $anoSerie }} {{ $req->turma }}
+                        <strong>Turma:</strong> {{ $nivelEnsino }} - {{ $anoSerie }} {{ $req->turma }}
                     </div>
 
                     <div class="disciplina-info">
@@ -210,10 +210,6 @@
 
     <div style="text-align: center; margin-top: 30px; font-weight: bold; font-size: 14px;">
         Total de solicitações: {{ $requerimentos->count() }}
-    </div>
-
-    <div class="footer">
-        Página <span class="page-number"></span> - Sistema de Requerimentos de Provas
     </div>
 </body>
 

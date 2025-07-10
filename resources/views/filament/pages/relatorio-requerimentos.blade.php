@@ -37,16 +37,59 @@
                         Relatório Personalizado
                     </h2>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Configure filtros específicos para gerar um relatório personalizado.
+                        Configure filtros básicos abaixo. Use o botão "Filtros Avançados" para adicionar mais opções de
+                        filtro.
                     </p>
                 </div>
-                <div>
+                <div class="flex gap-2">
                     {{ ($this->filtrosAction)(['size' => 'sm']) }}
                 </div>
             </div>
 
             <form wire:submit.prevent="generateReport">
                 {{ $this->form }}
+
+                <!-- Resumo dos Filtros Avançados Ativos -->
+                @php
+                    $data = $this->form->getState();
+                    $filtrosAtivos = [];
+                    $filtrosDisponiveis = [];
+                    $sessaoFiltros = $this->getFiltrosAtivos();
+
+                    // Verifica quais filtros estão habilitados (marcados no modal)
+                    if (!empty($sessaoFiltros['filtrar_nivel_ensino'])) {
+                        $filtrosDisponiveis[] = 'Nível de Ensino';
+                        if (!empty($data['nivel_ensino'])) {
+                            $filtrosAtivos[] = 'Nível de Ensino: ' . implode(', ', (array) $data['nivel_ensino']);
+                        }
+                    }
+                    if (!empty($sessaoFiltros['filtrar_ano'])) {
+                        $filtrosDisponiveis[] = 'Ano/Série';
+                        if (!empty($data['ano'])) {
+                            $filtrosAtivos[] = 'Ano/Série: ' . implode(', ', (array) $data['ano']);
+                        }
+                    }
+                    if (!empty($sessaoFiltros['filtrar_turma'])) {
+                        $filtrosDisponiveis[] = 'Turma';
+                        if (!empty($data['turma'])) {
+                            $filtrosAtivos[] = 'Turma: ' . implode(', ', (array) $data['turma']);
+                        }
+                    }
+                    if (!empty($sessaoFiltros['filtrar_disciplina'])) {
+                        $filtrosDisponiveis[] = 'Disciplina';
+                        if (!empty($data['disciplina_id'])) {
+                            $disciplinas = \App\Models\Disciplina::whereIn('id', (array) $data['disciplina_id'])->pluck('nome')->toArray();
+                            $filtrosAtivos[] = 'Disciplina: ' . implode(', ', $disciplinas);
+                        }
+                    }
+                    if (!empty($sessaoFiltros['filtrar_professor'])) {
+                        $filtrosDisponiveis[] = 'Professor';
+                        if (!empty($data['professor_id'])) {
+                            $professores = \App\Models\Professor::whereIn('id', (array) $data['professor_id'])->pluck('nome')->toArray();
+                            $filtrosAtivos[] = 'Professor: ' . implode(', ', $professores);
+                        }
+                    }
+                @endphp
 
                 <div class="mt-6">
                     <x-filament::button type="submit">

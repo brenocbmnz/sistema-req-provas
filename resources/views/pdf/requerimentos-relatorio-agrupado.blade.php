@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Relatório de Requerimentos</title>
+    <title>Relatório de Requerimentos - Agrupado por {{ $titulo_agrupamento }}</title>
     <style>
         body {
             font-family: sans-serif;
@@ -14,7 +14,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         th,
@@ -37,6 +37,32 @@
             text-align: center;
             margin-bottom: 30px;
             color: #333;
+        }
+
+        .group-header {
+            background-color: #e8f4f8;
+            padding: 12px;
+            margin: 30px 0 15px 0;
+            border-left: 4px solid #2196F3;
+            border-radius: 4px;
+        }
+
+        .group-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1976D2;
+            margin: 0;
+        }
+
+        .group-subtitle {
+            font-size: 12px;
+            color: #666;
+            margin: 5px 0 0 0;
+        }
+
+        .group-table {
+            margin-bottom: 40px;
+            page-break-inside: avoid;
         }
 
         .filters-applied {
@@ -64,6 +90,44 @@
             margin-bottom: 2px;
         }
 
+        .summary-box {
+            background-color: #f0f8ff;
+            border: 1px solid #b3d9ff;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .summary-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+
+        .summary-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1976D2;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+
         .footer {
             position: fixed;
             bottom: 0;
@@ -71,62 +135,94 @@
             text-align: center;
             font-size: 12px;
         }
+
+        /* Quebra de página entre grupos */
+        .group-section {
+            page-break-before: auto;
+            page-break-inside: avoid;
+        }
+
+        .group-section:first-child {
+            page-break-before: avoid;
+        }
     </style>
 </head>
 
 <body>
     <h1>Relatório de Requerimentos</h1>
     <div class="header-info">
-        <p>Relatório gerado em: {{ now()->format('d/m/Y H:i') }}</p>
+        <p>Relatório agrupado por {{ $titulo_agrupamento }} • Gerado em: {{ now()->format('d/m/Y H:i') }}</p>
     </div>
-    
-    <table>
-        <thead>
-            <tr>
-                <th>Aluno</th>
-                <th>Turma</th>
-                <th>Disciplina</th>
-                <th>Professor</th>
-                <th>Data</th>
-                <th>Motivo</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($requerimentos as $req)
-                <tr>
-                    <td>{{ $req->nome_completo }}</td>
-                    <td>
-                        @php
-                            $nivelEnsino = match ($req->nivel_ensino) {
-                                'Fundamental I' => 'Fund. I',
-                                'Fundamental II' => 'Fund. II',
-                                'Ensino Médio' => 'Ens. Médio',
-                                default => $req->nivel_ensino
-                            };
-                            $anoSerie = $req->nivel_ensino === 'Ensino Médio'
-                                ? $req->ano . 'ª Série'
-                                : $req->ano . 'º Ano';
-                        @endphp
-                        {{ $nivelEnsino }} | {{ $anoSerie }} {{ $req->turma }}
-                    </td>
-                    <td>{{ $req->disciplina->nome ?? 'N/A' }}</td>
-                    <td>{{ $req->professor->nome ?? 'N/A' }}</td>
-                    <td>{{ \Carbon\Carbon::parse($req->data_requerimento)->format('d/m/Y') }}</td>
-                    <td>{{ $req->motivo }}</td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="6" style="text-align: center;">Nenhum requerimento encontrado para os filtros selecionados.
-                    </td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+
+    <!-- Grupos de Requerimentos -->
+    @foreach($grupos as $grupo)
+        <div class="group-section">
+            <div class="group-header">
+                <h2 class="group-title">{{ $grupo['titulo'] }}</h2>
+                <p class="group-subtitle">{{ $grupo['total'] }} {{ $grupo['total'] === 1 ? 'requerimento' : 'requerimentos' }} encontrado{{ $grupo['total'] === 1 ? '' : 's' }}</p>
+            </div>
+
+            <div class="group-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Aluno</th>
+                            <th>Turma</th>
+                            @if($agrupamento !== 'disciplina')
+                                <th>Disciplina</th>
+                            @endif
+                            @if($agrupamento !== 'professor')
+                                <th>Professor</th>
+                            @endif
+                            <th>Data</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($grupo['requerimentos'] as $req)
+                            <tr>
+                                <td>{{ $req->nome_completo }}</td>
+                                <td>
+                                    @php
+                                        $nivelEnsino = match ($req->nivel_ensino) {
+                                            'Fundamental I' => 'Fund. I',
+                                            'Fundamental II' => 'Fund. II',
+                                            'Ensino Médio' => 'Ens. Médio',
+                                            default => $req->nivel_ensino
+                                        };
+                                        $anoSerie = $req->nivel_ensino === 'Ensino Médio'
+                                            ? $req->ano . 'ª Série'
+                                            : $req->ano . 'º Ano';
+                                    @endphp
+                                    {{ $nivelEnsino }} | {{ $anoSerie }} {{ $req->turma }}
+                                </td>
+                                @if($agrupamento !== 'disciplina')
+                                    <td>{{ $req->disciplina->nome ?? 'N/A' }}</td>
+                                @endif
+                                @if($agrupamento !== 'professor')
+                                    <td>{{ $req->professor->nome ?? 'N/A' }}</td>
+                                @endif
+                                <td>{{ \Carbon\Carbon::parse($req->data_requerimento)->format('d/m/Y') }}</td>
+
+                                <td>{{ $req->motivo }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endforeach
 
     @php
         // Verificar se há filtros realmente ativos ou agrupamento
         $hasActiveFilters = false;
         $activeFiltersList = [];
+        
+        // SEMPRE mostrar se há agrupamento (pois agrupamento é um filtro ativo)
+        if (isset($titulo_agrupamento) && !empty($titulo_agrupamento)) {
+            $hasActiveFilters = true;
+            $activeFiltersList[] = 'Agrupamento';
+        }
         
         // Verificar filtros básicos
         if (isset($filters['status']) && !empty($filters['status'])) {
@@ -173,6 +269,10 @@
         <div class="filters-applied">
             <h4>Filtros aplicados:</h4>
             <ul>
+                @if(isset($titulo_agrupamento) && !empty($titulo_agrupamento))
+                    <li><strong>Agrupamento:</strong> {{ $titulo_agrupamento }}</li>
+                @endif
+                
                 @if(isset($filters['status']) && !empty($filters['status']))
                     <li><strong>Status:</strong> 
                         @if(is_array($filters['status']))
@@ -262,8 +362,6 @@
             </ul>
         </div>
     @endif
-
-
 </body>
 
 </html>
