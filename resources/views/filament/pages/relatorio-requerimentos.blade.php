@@ -15,7 +15,7 @@
         .dark .dropdown-upward [data-choices] .choices__list--dropdown {
             box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.3), 0 -2px 4px -1px rgba(0, 0, 0, 0.2) !important;
         }
-        
+
         /* Garantir que o dropdown específico do campo agrupar_por funcione */
         [data-field="agrupar_por"].dropdown-upward .choices__list--dropdown,
         [data-field-wrapper="agrupar_por"].dropdown-upward .choices__list--dropdown {
@@ -130,7 +130,7 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             function adjustDropdownDirection() {
                 // Busca pelo campo de agrupamento usando o atributo data-field
                 const agruparPorField = document.querySelector('[data-field="agrupar_por"]');
@@ -142,22 +142,22 @@
                     }
                     return;
                 }
-                
+
                 processField(agruparPorField);
             }
-            
+
             function processField(fieldElement) {
                 const choicesContainer = fieldElement.querySelector('[data-choices]');
                 if (!choicesContainer) return;
 
                 const dropdownList = choicesContainer.querySelector('.choices__list--dropdown');
-                
+
                 // Observer para detectar quando o dropdown é aberto
-                const observer = new MutationObserver(function(mutations) {
-                    mutations.forEach(function(mutation) {
+                const observer = new MutationObserver(function (mutations) {
+                    mutations.forEach(function (mutation) {
                         if (mutation.type === 'attributes' && mutation.attributeName === 'aria-expanded') {
                             const isOpen = choicesContainer.getAttribute('aria-expanded') === 'true';
-                            
+
                             if (isOpen && dropdownList) {
                                 // Aguardar um pouco para o dropdown ser renderizado
                                 setTimeout(() => {
@@ -166,7 +166,7 @@
                                     const viewportHeight = window.innerHeight;
                                     const spaceBelow = viewportHeight - fieldRect.bottom;
                                     const dropdownHeight = 200; // Altura estimada do dropdown
-                                    
+
                                     // Se não há espaço suficiente abaixo, abrir para cima
                                     if (spaceBelow < dropdownHeight) {
                                         fieldElement.classList.add('dropdown-upward');
@@ -189,7 +189,7 @@
                 });
 
                 // Cleanup quando o componente for removido
-                window.addEventListener('beforeunload', function() {
+                window.addEventListener('beforeunload', function () {
                     observer.disconnect();
                 });
             }
@@ -200,7 +200,7 @@
             // Re-executar após updates do Livewire
             document.addEventListener('livewire:navigated', adjustDropdownDirection);
             window.addEventListener('livewire:load', adjustDropdownDirection);
-            
+
             // Para versões mais recentes do Livewire
             if (window.Livewire) {
                 window.Livewire.hook('morph.updated', adjustDropdownDirection);
