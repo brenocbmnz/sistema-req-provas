@@ -155,7 +155,12 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
                         Select::make('professor_id')
                             ->label('Professor')
-                            ->options(Professor::all()->pluck('nome', 'id'))
+                            ->options(function(){
+                                return Professor::query()
+                                    ->whereHas('disciplinas')
+                                    ->orderBy('nome', 'asc')
+                                    ->pluck('nome', 'id');
+                            })
                             ->placeholder('Selecione os professores')
                             ->multiple()
                             ->searchable()

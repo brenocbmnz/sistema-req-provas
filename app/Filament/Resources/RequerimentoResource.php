@@ -90,6 +90,7 @@ class RequerimentoResource extends Resource
                             ->optionsLimit(20),
                         Forms\Components\Select::make('professor_id')
                             ->label('Professor')
+                            
                             ->options(function (Get $get): Collection {
                                 $disciplinaId = $get('disciplina_id');
                                 if (!$disciplinaId) {
@@ -99,6 +100,7 @@ class RequerimentoResource extends Resource
                                     ->whereHas('disciplinas', function ($query) use ($disciplinaId) {
                                         $query->where('disciplinas.id', $disciplinaId);
                                     })
+                                    ->orderBy('nome', 'asc')
                                     ->pluck('nome', 'id');
                             })
                             ->disabled(fn (Get $get): bool => !$get('disciplina_id'))
