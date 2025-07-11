@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Login;
+use App\Http\Middleware\EnsureUserIsApproved;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -26,7 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->default() // É uma boa prática marcar o painel principal como padrão
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(Login::class)
             ->registration()
             ->brandLogo(asset('images/saobentologo.svg'))
             ->brandLogoHeight('3rem')
@@ -54,6 +56,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+                EnsureUserIsApproved::class,
+            ])
+            ->homeUrl('/admin'); // Define a URL home para o painel admin
     }
 }
