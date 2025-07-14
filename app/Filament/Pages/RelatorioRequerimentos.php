@@ -147,7 +147,11 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
                         Select::make('disciplina_id')
                             ->label('Disciplina')
-                            ->options(Disciplina::all()->pluck('nome', 'id'))
+                            ->options(function(){
+                                return Disciplina::query()
+                                    ->orderBy('nome', 'asc')
+                                    ->pluck('nome', 'id');
+                            })
                             ->placeholder('Selecione as disciplinas')
                             ->multiple()
                             ->searchable()
@@ -219,6 +223,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                             ])
                             ->default('nivel')
                             ->required()
+                            ->live()
                             ->helperText('Selecione o campo principal para ordenação dos dados no relatório.'),
                         
                         Select::make('direcao_ordenacao')
@@ -230,6 +235,23 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                             ->default('asc')
                             ->required(),
                     ])->columns(2),
+                
+                Section::make('Filtro por Nível de Ensino')
+                    ->description('Selecione quais níveis de ensino deseja incluir no relatório.')
+                    ->schema([
+                        Group::make([
+                            Checkbox::make('incluir_fundamental_1')
+                                ->label('Fundamental I')
+                                ->default(true),
+                            Checkbox::make('incluir_fundamental_2')
+                                ->label('Fundamental II')
+                                ->default(true),
+                            Checkbox::make('incluir_ensino_medio')
+                                ->label('Ensino Médio')
+                                ->default(true),
+                        ])->columns(3),
+                    ])
+                    ->visible(fn (Get $get): bool => $get('ordenacao') === 'nivel'),
             ]);
     }
 
@@ -479,11 +501,33 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             return;
         }
 
-        // Query base com filtro de data e aplicação da ordenação
+        // Validação dos níveis de ensino selecionados
+        $niveisIncluir = [];
+        if ($formDataGeral['incluir_fundamental_1'] ?? true) {
+            $niveisIncluir[] = 'Fundamental I';
+        }
+        if ($formDataGeral['incluir_fundamental_2'] ?? true) {
+            $niveisIncluir[] = 'Fundamental II';
+        }
+        if ($formDataGeral['incluir_ensino_medio'] ?? true) {
+            $niveisIncluir[] = 'Ensino Médio';
+        }
+
+        if (empty($niveisIncluir)) {
+            Notification::make()
+                ->title('Erro de validação')
+                ->body('Selecione pelo menos um nível de ensino.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        // Query base com filtro de data e níveis de ensino selecionados
         $query = Requerimento::query()
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
-            ->where('data_requerimento', '<=', $formDataGeral['data_final']);
+            ->where('data_requerimento', '<=', $formDataGeral['data_final'])
+            ->whereIn('nivel_ensino', $niveisIncluir);
 
         // Aplicar ordenação baseada na seleção do usuário
         $ordenacao = $formDataGeral['ordenacao'] ?? 'nivel';
@@ -496,7 +540,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         if ($requerimentos->isEmpty()) {
             Notification::make()
                 ->title('Nenhum requerimento encontrado')
-                ->body('Não foram encontrados requerimentos no período selecionado.')
+                ->body('Não foram encontrados requerimentos no período selecionado com os níveis de ensino escolhidos.')
                 ->warning()
                 ->send();
             return;
@@ -611,7 +655,9 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         $pdf = Pdf::loadView('pdf.relatorio-geral', [
             'dados' => $dadosAgrupados,
-            'filtros' => $formDataGeral,
+            'filtros' => array_merge($formDataGeral, [
+                'niveis_incluidos' => $niveisIncluir
+            ]),
             'total_geral' => $requerimentos->count(),
             'ordenacao_info' => [
                 'campo' => $ordenacao,
@@ -624,7 +670,6 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             echo $pdf->stream();
         }, 'relatorio-geral-ordenado-' . now()->format('Y-m-d_H-i') . '.pdf');
     }
-
     public function generateRelatorioCompleto()
     {
         $formDataGeral = $this->formGeral->getState();
@@ -639,11 +684,33 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             return;
         }
 
-        // Query base com filtro de data
+        // Validação dos níveis de ensino selecionados
+        $niveisIncluir = [];
+        if ($formDataGeral['incluir_fundamental_1'] ?? true) {
+            $niveisIncluir[] = 'Fundamental I';
+        }
+        if ($formDataGeral['incluir_fundamental_2'] ?? true) {
+            $niveisIncluir[] = 'Fundamental II';
+        }
+        if ($formDataGeral['incluir_ensino_medio'] ?? true) {
+            $niveisIncluir[] = 'Ensino Médio';
+        }
+
+        if (empty($niveisIncluir)) {
+            Notification::make()
+                ->title('Erro de validação')
+                ->body('Selecione pelo menos um nível de ensino.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        // Query base com filtro de data e níveis de ensino selecionados
         $query = Requerimento::query()
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
-            ->where('data_requerimento', '<=', $formDataGeral['data_final']);
+            ->where('data_requerimento', '<=', $formDataGeral['data_final'])
+            ->whereIn('nivel_ensino', $niveisIncluir);
 
         // Aplicar ordenação baseada na seleção do usuário
         $ordenacao = $formDataGeral['ordenacao'] ?? 'nivel';
@@ -656,7 +723,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         if ($requerimentos->isEmpty()) {
             Notification::make()
                 ->title('Nenhum requerimento encontrado')
-                ->body('Não foram encontrados requerimentos no período selecionado.')
+                ->body('Não foram encontrados requerimentos no período selecionado com os níveis de ensino escolhidos.')
                 ->warning()
                 ->send();
             return;
@@ -664,7 +731,9 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         $pdf = Pdf::loadView('pdf.relatorio-completo', [
             'requerimentos' => $requerimentos,
-            'filtros' => $formDataGeral,
+            'filtros' => array_merge($formDataGeral, [
+                'niveis_incluidos' => $niveisIncluir
+            ]),
             'ordenacao_info' => [
                 'campo' => $ordenacao,
                 'direcao' => $direcao,

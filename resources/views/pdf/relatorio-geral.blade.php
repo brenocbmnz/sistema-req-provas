@@ -89,6 +89,9 @@
             <p><strong>Ordenação:</strong> {{ $ordenacao_info['campo_nome'] }}
                 ({{ $ordenacao_info['direcao'] === 'asc' ? 'Crescente' : 'Decrescente' }})</p>
         @endif
+        @if(isset($filtros['niveis_incluidos']) && !empty($filtros['niveis_incluidos']))
+            <p><strong>Níveis de Ensino incluídos:</strong> {{ implode(', ', $filtros['niveis_incluidos']) }}</p>
+        @endif
     </div>
 
     <div class="divider">

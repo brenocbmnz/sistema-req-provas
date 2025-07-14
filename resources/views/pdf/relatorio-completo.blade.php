@@ -153,6 +153,9 @@
             <p><strong>Ordenação:</strong> {{ $ordenacao_info['campo_nome'] }}
                 ({{ $ordenacao_info['direcao_nome'] }})</p>
         @endif
+        @if(isset($filtros['niveis_incluidos']) && !empty($filtros['niveis_incluidos']))
+            <p><strong>Níveis de Ensino incluídos:</strong> {{ implode(', ', $filtros['niveis_incluidos']) }}</p>
+        @endif
     </div>
 
     @foreach($requerimentos as $index => $req)
