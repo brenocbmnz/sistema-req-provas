@@ -193,7 +193,11 @@
                     <thead>
                         <tr>
                             <th>Aluno</th>
-                            <th>Turma</th>
+                            @if($agrupamento === 'turma')
+                                <th>Nível de Ensino</th>
+                            @else
+                                <th>Turma</th>
+                            @endif
                             @if($agrupamento !== 'disciplina')
                                 <th>Disciplina</th>
                             @endif
@@ -221,7 +225,13 @@
                                             ? $req->ano . 'ª Série'
                                             : $req->ano . 'º Ano';
                                     @endphp
-                                    {{ $nivelEnsino }} | {{ $anoSerie }} {{ $req->turma }}
+                                    @if($agrupamento === 'turma')
+                                        {{ $nivelEnsino }}
+                                    @elseif($agrupamento === 'nivel_ensino')
+                                        {{ $anoSerie }} - Turma {{ $req->turma }}
+                                    @else
+                                        {{ $nivelEnsino }} | {{ $anoSerie }} {{ $req->turma }}
+                                    @endif
                                 </td>
                                 @if($agrupamento !== 'disciplina')
                                     <td>{{ $req->disciplina->nome ?? 'N/A' }}</td>

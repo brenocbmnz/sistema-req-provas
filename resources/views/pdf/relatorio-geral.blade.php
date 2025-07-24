@@ -100,8 +100,8 @@
             <thead>
                 <tr>
                     <th>Nível de Ensino</th>
-                    <th>Turma</th>
                     <th>Disciplina</th>
+                    <th>Turma</th>
                     <th>Professor</th>
                     <th>Alunos Inscritos</th>
                 </tr>
@@ -110,8 +110,8 @@
                 @foreach($dados as $item)
                     <tr>
                         <td>{{ $item['nivel_ensino'] }}</td>
-                        <td>{{ $item['serie'] }}</td>
                         <td>{{ $item['disciplina'] }}</td>
+                        <td>{{ $item['serie'] }}</td>
                         <td>{{ $item['professor'] }}</td>
                         <td style="text-align: center;">{{ $item['total_alunos'] }}</td>
                     </tr>
