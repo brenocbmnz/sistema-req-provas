@@ -38,9 +38,10 @@ public static function table(Table $table): Table
 {
     return $table
         ->columns([
-            Tables\Columns\TextColumn::make('nome')->searchable(),
+            Tables\Columns\TextColumn::make('nome')->searchable() ->sortable(),
             Tables\Columns\TextColumn::make('data_inicio')->date('d/m/Y'),
             Tables\Columns\TextColumn::make('data_fim')->date('d/m/Y'),
+            
         ])
         ->filters([
             //

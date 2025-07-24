@@ -249,6 +249,9 @@ class RequerimentoResource extends Resource
                                     \Filament\Infolists\Components\TextEntry::make('observacao')
                                         ->label('Observação/Justificativa')
                                         ->columnSpanFull()
+                                            ->extraAttributes([
+                                            'style' => 'word-wrap: break-word; word-break: break-all; max-width: 100%;'
+                        ])
                                         ->visible(fn ($record) => !empty($record->observacao)),
                                 ])->columns(2),
                         ]),
