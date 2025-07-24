@@ -50,7 +50,7 @@
                     </x-filament::button>
 
                     <x-filament::button type="button" wire:click="generateRelatorioCompleto" color="primary">
-                        Gerar Relatório Completo
+                        Alunos Inscritos
                     </x-filament::button>
                 </div>
             </form>

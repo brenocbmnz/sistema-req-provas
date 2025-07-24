@@ -48,7 +48,7 @@
             text-align: center;
             font-weight: bold;
             font-size: 14px;
-            background-color: #e8f4f8;
+            background-color: #f5e6ea;
             padding: 5px 0 5px 0;
             border-bottom: 1px solid #333;
         }
@@ -76,7 +76,7 @@
             display: table-cell;
             width: 28%;
             padding: 0;
-            background-color: #f0f8ff;
+            background-color: #fdf2f4;
             text-align: center;
             box-sizing: border-box;
             vertical-align: middle;

@@ -65,7 +65,7 @@
         }
 
         .total-row {
-            background-color: #e8f4f8;
+            background-color: #f5e6ea;
             font-weight: bold;
         }
 

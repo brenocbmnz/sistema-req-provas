@@ -9,12 +9,14 @@
             font-family: sans-serif;
             margin: 0;
             padding: 20px;
+            line-height: 1.4;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
+            table-layout: fixed;
         }
 
         th,
@@ -22,10 +24,13 @@
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
+            vertical-align: top;
+            word-wrap: break-word;
         }
 
         th {
             background-color: #f2f2f2;
+            font-weight: bold;
         }
 
         h1 {
@@ -40,11 +45,15 @@
         }
 
         .group-header {
-            background-color: #e8f4f8;
+            background-color: #f5e6ea;
             padding: 12px;
             margin: 30px 0 15px 0;
-            border-left: 4px solid #2196F3;
+            border-left: 4px solid #a8344a;
             border-radius: 4px;
+            /* Evitar quebra de página dentro do header */
+            page-break-inside: avoid;
+            /* Manter sempre junto com a tabela seguinte */
+            page-break-after: avoid;
         }
 
         .group-section:first-child .group-header {
@@ -54,26 +63,33 @@
         .group-title {
             font-size: 16px;
             font-weight: bold;
-            color: #1976D2;
+            color: #881337;
             margin: 0;
+            line-height: 1.4;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .group-subtitle {
             font-size: 12px;
             color: #666;
-            margin: 5px 0 0 0;
+            font-weight: normal;
         }
 
         .group-table {
             margin-bottom: 40px;
+            clear: both;
+            width: 100%;
+            display: block;
+            /* Manter sempre junto com o header anterior */
+            page-break-before: avoid;
         }
 
-        .group-section:first-child .group-table {
-            page-break-inside: auto;
-        }
-
-        .group-section:not(:first-child) .group-table {
-            page-break-inside: avoid;
+        .group-table table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            display: table;
         }
 
         .filters-applied {
@@ -102,8 +118,8 @@
         }
 
         .summary-box {
-            background-color: #f0f8ff;
-            border: 1px solid #b3d9ff;
+            background-color: #fdf2f4;
+            border: 1px solid #e5a3b3;
             padding: 15px;
             margin-bottom: 30px;
             border-radius: 5px;
@@ -113,7 +129,7 @@
         .summary-title {
             font-size: 14px;
             font-weight: bold;
-            color: #1976D2;
+            color: #881337;
             margin-bottom: 10px;
         }
 
@@ -131,7 +147,7 @@
         .stat-number {
             font-size: 18px;
             font-weight: bold;
-            color: #1976D2;
+            color: #881337;
         }
 
         .stat-label {
@@ -149,7 +165,7 @@
 
         /* Quebra de página entre grupos */
         .group-section {
-            page-break-inside: auto;
+            page-break-inside: avoid;
         }
 
         .group-section:not(:first-child) {
@@ -159,8 +175,17 @@
 
         .group-section:first-child {
             page-break-before: avoid;
-            page-break-inside: auto;
+            page-break-inside: avoid;
             margin-top: 0;
+        }
+
+        /* Manter header e tabela sempre juntos */
+        .group-header {
+            page-break-after: avoid;
+        }
+
+        .group-table {
+            page-break-before: avoid;
         }
 
         /* Forçar que a primeira tabela comece na primeira página */
@@ -184,8 +209,7 @@
     @foreach($grupos as $grupo)
         <div class="group-section">
             <div class="group-header">
-                <h2 class="group-title">{{ $grupo['titulo'] }}</h2>
-                <p class="group-subtitle">{{ $grupo['total'] }} {{ $grupo['total'] === 1 ? 'requerimento' : 'requerimentos' }} encontrado{{ $grupo['total'] === 1 ? '' : 's' }}</p>
+                <h2 class="group-title">{{ $grupo['titulo'] }} <span class="group-subtitle">• {{ $grupo['total'] }} {{ $grupo['total'] === 1 ? 'requerimento' : 'requerimentos' }} encontrado{{ $grupo['total'] === 1 ? '' : 's' }}</span></h2>
             </div>
 
             <div class="group-table">
