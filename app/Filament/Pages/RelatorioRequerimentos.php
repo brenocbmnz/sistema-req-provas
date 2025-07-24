@@ -249,6 +249,9 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                             Checkbox::make('incluir_ensino_medio')
                                 ->label('Ensino Médio')
                                 ->default(true),
+                        Checkbox::make('incluir_terceirao')
+                                ->label('Terceirão')
+                                ->default(true),
                         ])->columns(3),
                     ])
                     ->visible(fn (Get $get): bool => $get('ordenacao') === 'nivel'),
@@ -302,7 +305,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         Group::make([
                             Checkbox::make('filtrar_nivel_ensino')
                                 ->label('Filtrar por Nível de Ensino')
-                                ->helperText('Fundamental I, Fundamental II, Ensino Médio'),
+                                ->helperText('Fundamental I, Fundamental II, Ensino Médio, Terceirão'),
                             Checkbox::make('filtrar_ano')
                                 ->label('Filtrar por Ano/Série')
                                 ->helperText('1º ao 9º ano, 1ª à 3ª série'),
@@ -512,6 +515,9 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         if ($formDataGeral['incluir_ensino_medio'] ?? true) {
             $niveisIncluir[] = 'Ensino Médio';
         }
+        if ($formDataGeral['incluir_terceirao'] ?? true) {
+            $niveisIncluir[] = 'Terceirão';
+        }
 
         if (empty($niveisIncluir)) {
             Notification::make()
@@ -555,11 +561,12 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 'Fundamental I' => 'Ensino Fundamental I',
                 'Fundamental II' => 'Ensino Fundamental II', 
                 'Ensino Médio' => 'Ensino Médio',
+                'Terceirão' => 'Terceirão',
                 default => $primeiro->nivel_ensino
             };
             return [
                 'nivel_ensino' => $nivelEnsino,
-                'serie' => $primeiro->nivel_ensino === 'Ensino Médio' 
+                'serie' => ($primeiro->nivel_ensino === 'Ensino Médio' || $primeiro->nivel_ensino === 'Terceirão')
                     ? $primeiro->ano . 'ª Série' 
                     : $primeiro->ano . 'º Ano',
                 'disciplina' => $primeiro->disciplina->nome,
@@ -572,12 +579,13 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         // Aplicar ordenação final nos dados agrupados
         switch ($ordenacao) {
             case 'nivel':
-                // Ordenação customizada por nível de ensino: Fundamental I, Fundamental II, Ensino Médio
+                // Ordenação customizada por nível de ensino: Fundamental I, Fundamental II, Ensino Médio, Terceirão
                 $dadosAgrupados = $dadosAgrupados->sort(function ($a, $b) use ($direcao) {
                     $nivelPrioridade = [
                         'Fundamental I' => 1,
                         'Fundamental II' => 2,
-                        'Ensino Médio' => 3
+                        'Ensino Médio' => 3,
+                        'Terceirão' => 4
                     ];
                     
                     $nivelA = $a['requerimentos']->first()->nivel_ensino;
@@ -621,13 +629,14 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 });
                 break;
             default:
-                // Ordenação customizada que coloca Ensino Médio por último
+                // Ordenação customizada que coloca Terceirão por último
                 $dadosAgrupados = $dadosAgrupados->sort(function ($a, $b) {
                     // Definir prioridade para níveis de ensino
                     $nivelPrioridade = [
                         'Fundamental I' => 1,
                         'Fundamental II' => 2,
-                        'Ensino Médio' => 3
+                        'Ensino Médio' => 3,
+                        'Terceirão' => 4
                     ];
                     
                     $nivelA = $a['requerimentos']->first()->nivel_ensino;
@@ -695,6 +704,9 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         if ($formDataGeral['incluir_ensino_medio'] ?? true) {
             $niveisIncluir[] = 'Ensino Médio';
         }
+        if ($formDataGeral['incluir_terceirao'] ?? true) {
+            $niveisIncluir[] = 'Terceirão';
+        }
 
         if (empty($niveisIncluir)) {
             Notification::make()
@@ -758,7 +770,8 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         WHEN 'Fundamental I' THEN 1
                         WHEN 'Fundamental II' THEN 2
                         WHEN 'Ensino Médio' THEN 3
-                        ELSE 4
+                        WHEN 'Terceirão' THEN 4
+                        ELSE 5
                     END {$ordenacaoNivel}
                 ")
                 ->orderBy('ano', $direcao)
@@ -773,7 +786,8 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                                     WHEN 'Fundamental I' THEN 1
                                     WHEN 'Fundamental II' THEN 2
                                     WHEN 'Ensino Médio' THEN 3
-                                    ELSE 4
+                                    WHEN 'Terceirão' THEN 4
+                                    ELSE 5
                                 END ASC
                             ")
                             ->orderBy('nome_completo', 'asc');
@@ -786,7 +800,8 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                                     WHEN 'Fundamental I' THEN 1
                                     WHEN 'Fundamental II' THEN 2
                                     WHEN 'Ensino Médio' THEN 3
-                                    ELSE 4
+                                    WHEN 'Terceirão' THEN 4
+                                    ELSE 5
                                 END ASC
                             ")
                             ->orderBy('ano', $direcao)
@@ -801,7 +816,8 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                                     WHEN 'Fundamental I' THEN 1
                                     WHEN 'Fundamental II' THEN 2
                                     WHEN 'Ensino Médio' THEN 3
-                                    ELSE 4
+                                    WHEN 'Terceirão' THEN 4
+                                    ELSE 5
                                 END ASC
                             ")
                             ->orderBy('ano', $direcao)
@@ -815,7 +831,8 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                                     WHEN 'Fundamental I' THEN 1
                                     WHEN 'Fundamental II' THEN 2
                                     WHEN 'Ensino Médio' THEN 3
-                                    ELSE 4
+                                    WHEN 'Terceirão' THEN 4
+                                    ELSE 5
                                 END ASC
                             ")
                             ->orderBy('ano', 'asc');
@@ -830,7 +847,8 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         WHEN 'Fundamental I' THEN 1
                         WHEN 'Fundamental II' THEN 2
                         WHEN 'Ensino Médio' THEN 3
-                        ELSE 4
+                        WHEN 'Terceirão' THEN 4
+                        ELSE 5
                     END ASC
                 ")
                 ->orderBy('ano', 'asc')
@@ -859,7 +877,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 'professor' => $req->professor->nome ?? 'Sem Professor',
                 'disciplina' => $req->disciplina->nome ?? 'Sem Disciplina',
                 'nivel_ensino' => $req->nivel_ensino,
-                'turma' => $req->nivel_ensino . ' - ' . $req->ano . ($req->nivel_ensino === 'Ensino Médio' ? 'ª Série' : 'º Ano') . ' - Turma ' . $req->turma,
+                'turma' => $req->nivel_ensino . ' - ' . $req->ano . (($req->nivel_ensino === 'Ensino Médio' || $req->nivel_ensino === 'Terceirão') ? 'ª Série' : 'º Ano') . ' - Turma ' . $req->turma,
                 'status' => $req->status,
                 'trimestre' => $req->trimestre->nome ?? 'Sem Trimestre',
                 default => 'Outros'

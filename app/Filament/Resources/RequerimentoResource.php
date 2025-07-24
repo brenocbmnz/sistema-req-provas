@@ -58,7 +58,8 @@ class RequerimentoResource extends Resource
                             ->options(fn (Get $get): array => match ($get('nivel_ensino')) {
                                 NivelEnsino::FUNDAMENTAL1->value => array_combine(range(1, 5), range(1, 5)),
                                 NivelEnsino::FUNDAMENTAL2->value => array_combine(range(6, 9), range(6, 9)),
-                                NivelEnsino::MEDIO->value => array_combine(range(1, 3), range(1, 3)),
+                                NivelEnsino::MEDIO->value => array_combine(range(1, 2), range(1, 2)),
+                                NivelEnsino::TERCEIRAO->value => [3 => 3],
                                 default => [],
                             })
                             ->required(),
@@ -205,11 +206,12 @@ class RequerimentoResource extends Resource
                                             'Fundamental I' => 'Ensino Fundamental I',
                                             'Fundamental II' => 'Ensino Fundamental II', 
                                             'Ensino Médio' => 'Ensino Médio',
+                                            'Terceirão' => 'Terceirão',
                                             default => $state
                                         }),
                                     \Filament\Infolists\Components\TextEntry::make('ano')
                                         ->label('Ano/Série')
-                                        ->formatStateUsing(fn ($state, $record) => $record->nivel_ensino === 'Ensino Médio' 
+                                        ->formatStateUsing(fn ($state, $record) => ($record->nivel_ensino === 'Ensino Médio' || $record->nivel_ensino === 'Terceirão')
                                             ? $state . 'ª Série' 
                                             : $state . 'º Ano'),
                                     \Filament\Infolists\Components\TextEntry::make('turma')

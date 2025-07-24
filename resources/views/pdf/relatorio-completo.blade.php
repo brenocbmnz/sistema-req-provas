@@ -151,9 +151,10 @@
                             'Fundamental I' => 'Ensino Fundamental I',
                             'Fundamental II' => 'Ensino Fundamental II',
                             'Ensino Médio' => 'Ensino Médio',
+                            'Terceirão' => 'Terceirão',
                             default => $req->nivel_ensino
                         };
-                        $anoSerie = $req->nivel_ensino === 'Ensino Médio'
+                        $anoSerie = ($req->nivel_ensino === 'Ensino Médio' || $req->nivel_ensino === 'Terceirão')
                             ? $req->ano . 'ª Série'
                             : $req->ano . 'º Ano';
                     @endphp
