@@ -217,9 +217,7 @@
                     <thead>
                         <tr>
                             <th>Aluno</th>
-                            @if($agrupamento === 'turma')
-                                <th>Nível de Ensino</th>
-                            @else
+                            @if($agrupamento !== 'turma')
                                 <th>Turma</th>
                             @endif
                             @if($agrupamento !== 'disciplina')
@@ -236,27 +234,27 @@
                         @foreach($grupo['requerimentos'] as $req)
                             <tr>
                                 <td>{{ $req->nome_completo }}</td>
-                                <td>
-                                    @php
-                                        $nivelEnsino = match ($req->nivel_ensino) {
-                                            'Fundamental I' => 'Fund. I',
-                                            'Fundamental II' => 'Fund. II',
-                                            'Ensino Médio' => 'Ens. Médio',
-                                            'Terceirão' => 'Terceirão',
-                                            default => $req->nivel_ensino
-                                        };
-                                        $anoSerie = ($req->nivel_ensino === 'Ensino Médio' || $req->nivel_ensino === 'Terceirão')
-                                            ? $req->ano . 'ª Série'
-                                            : $req->ano . 'º Ano';
-                                    @endphp
-                                    @if($agrupamento === 'turma')
-                                        {{ $nivelEnsino }}
-                                    @elseif($agrupamento === 'nivel_ensino')
-                                        {{ $anoSerie }} - Turma {{ $req->turma }}
-                                    @else
-                                        {{ $nivelEnsino }} | {{ $anoSerie }} {{ $req->turma }}
-                                    @endif
-                                </td>
+                                @if($agrupamento !== 'turma')
+                                    <td>
+                                        @php
+                                            $nivelEnsino = match ($req->nivel_ensino) {
+                                                'Fundamental I' => 'Fund. I',
+                                                'Fundamental II' => 'Fund. II',
+                                                'Ensino Médio' => 'Ens. Médio',
+                                                'Terceirão' => 'Terceirão',
+                                                default => $req->nivel_ensino
+                                            };
+                                            $anoSerie = ($req->nivel_ensino === 'Ensino Médio' || $req->nivel_ensino === 'Terceirão')
+                                                ? $req->ano . 'ª Série'
+                                                : $req->ano . 'º Ano';
+                                        @endphp
+                                        @if($agrupamento === 'nivel_ensino')
+                                            {{ $anoSerie }} - Turma {{ $req->turma }}
+                                        @else
+                                            {{ $nivelEnsino }} | {{ $anoSerie }} {{ $req->turma }}
+                                        @endif
+                                    </td>
+                                @endif
                                 @if($agrupamento !== 'disciplina')
                                     <td>{{ $req->disciplina->nome ?? 'N/A' }}</td>
                                 @endif

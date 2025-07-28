@@ -44,7 +44,7 @@
             <form wire:submit.prevent="generateRelatoriosGerais">
                 {{ $this->formGeral }}
 
-                <div class="mt-6 flex gap-4 flex-wrap">
+                <div class="mt-6 flex gap-4 flex-wrap items-center">
                     <x-filament::button type="button" wire:click="generateRelatorioPorSerie" color="primary">
                         Gerar Relatório Geral
                     </x-filament::button>
@@ -52,6 +52,8 @@
                     <x-filament::button type="button" wire:click="generateRelatorioCompleto" color="primary">
                         Alunos Inscritos
                     </x-filament::button>
+
+
                 </div>
             </form>
         </div>
@@ -120,10 +122,12 @@
                     }
                 @endphp
 
-                <div class="mt-6">
+                <div class="mt-6 flex gap-4 flex-wrap items-center">
                     <x-filament::button type="submit">
                         Gerar Relatório Personalizado
                     </x-filament::button>
+
+
                 </div>
             </form>
         </div>
