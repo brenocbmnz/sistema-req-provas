@@ -253,7 +253,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         Checkbox::make('incluir_terceirao')
                                 ->label('Terceirão')
                                 ->default(true),
-                        ])->columns(3),
+                        ])->columns(4),
                     ])
                     ->visible(fn (Get $get): bool => $get('ordenacao') === 'nivel'),
             ]);
