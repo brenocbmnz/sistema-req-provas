@@ -210,5 +210,15 @@
                 window.Livewire.hook('morph.updated', adjustDropdownDirection);
             }
         });
+
+        document.addEventListener('livewire:init', () => {
+            Livewire.on('open-pdf-in-new-tab', (event) => {
+                // Acessa a URL passada no evento
+                const url = event.url;
+                if (url) {
+                    window.open(url, '_blank');
+                }
+            });
+        });
     </script>
 </x-filament-panels::page>

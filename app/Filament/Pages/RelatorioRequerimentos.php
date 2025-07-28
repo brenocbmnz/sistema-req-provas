@@ -22,6 +22,7 @@ use App\Models\Professor;
 use App\Enums\NivelEnsino;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Session;
 
 class RelatorioRequerimentos extends Page implements HasForms, HasActions
 {
@@ -465,29 +466,41 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         // Verificar se deve agrupar
         $agruparPor = $formData['agrupar_por'] ?? '';
         
+        $viewName = '';
+        $viewData = [];
+
         if (empty($agruparPor)) {
             // Relatório normal sem agrupamento
-            $pdf = Pdf::loadView('pdf.requerimentos-relatorio', [
+            $viewName = 'pdf.requerimentos-relatorio';
+            $viewData = [
                 'requerimentos' => $requerimentos,
                 'filters' => $filtersForPdf
-            ]);
+            ];
         } else {
             // Relatório agrupado
             $dadosAgrupados = $this->agruparRequerimentos($requerimentos, $agruparPor);
             
-            $pdf = Pdf::loadView('pdf.requerimentos-relatorio-agrupado', [
+            $viewName = 'pdf.requerimentos-relatorio-agrupado';
+            $viewData = [
                 'grupos' => $dadosAgrupados,
                 'filters' => $filtersForPdf,
                 'agrupamento' => $agruparPor,
                 'titulo_agrupamento' => $this->obterTituloAgrupamento($agruparPor)
-            ]);
+            ];
         }
 
         $tipoRelatorio = empty($agruparPor) ? 'personalizado' : 'agrupado-' . $agruparPor;
-        
-        return response()->streamDownload(function () use ($pdf) {
-            echo $pdf->stream();
-        }, "relatorio-{$tipoRelatorio}-" . now()->format('Y-m-d_H-i') . '.pdf');
+        $filename = "relatorio-{$tipoRelatorio}-" . now()->format('Y-m-d_H-i') . '.pdf';
+
+        // Armazenar dados na sessão
+        Session::put('pdf_report_data', [
+            'view' => $viewName,
+            'data' => $viewData,
+            'filename' => $filename,
+        ]);
+
+        // Abrir nova aba para visualização
+        $this->dispatch('open-pdf-in-new-tab', url: route('report.view'));
     }
 
     public function generateRelatorioPorSerie()
@@ -662,7 +675,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 });
         }
 
-        $pdf = Pdf::loadView('pdf.relatorio-geral', [
+        $viewData = [
             'dados' => $dadosAgrupados,
             'filtros' => array_merge($formDataGeral, [
                 'niveis_incluidos' => $niveisIncluir
@@ -673,11 +686,19 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 'direcao' => $direcao,
                 'campo_nome' => $this->obterNomeCampoOrdenacao($ordenacao)
             ]
+        ];
+
+        $filename = 'relatorio-geral-ordenado-' . now()->format('Y-m-d_H-i') . '.pdf';
+
+        // Armazenar dados na sessão
+        Session::put('pdf_report_data', [
+            'view' => 'pdf.relatorio-geral',
+            'data' => $viewData,
+            'filename' => $filename,
         ]);
 
-        return response()->streamDownload(function () use ($pdf) {
-            echo $pdf->stream();
-        }, 'relatorio-geral-ordenado-' . now()->format('Y-m-d_H-i') . '.pdf');
+        // Abrir nova aba para visualização
+        $this->dispatch('open-pdf-in-new-tab', url: route('report.view'));
     }
     public function generateRelatorioCompleto()
     {
@@ -741,7 +762,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             return;
         }
 
-        $pdf = Pdf::loadView('pdf.relatorio-completo', [
+        $viewData = [
             'requerimentos' => $requerimentos,
             'filtros' => array_merge($formDataGeral, [
                 'niveis_incluidos' => $niveisIncluir
@@ -752,11 +773,19 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 'campo_nome' => $this->obterNomeCampoOrdenacao($ordenacao),
                 'direcao_nome' => $direcao === 'asc' ? 'Crescente' : 'Decrescente'
             ]
+        ];
+
+        $filename = 'relatorio-completo-ordenado-' . now()->format('Y-m-d_H-i') . '.pdf';
+
+        // Armazenar dados na sessão
+        Session::put('pdf_report_data', [
+            'view' => 'pdf.relatorio-completo',
+            'data' => $viewData,
+            'filename' => $filename,
         ]);
 
-        return response()->streamDownload(function () use ($pdf) {
-            echo $pdf->stream();
-        }, 'relatorio-completo-ordenado-' . now()->format('Y-m-d_H-i') . '.pdf');
+        // Abrir nova aba para visualização
+        $this->dispatch('open-pdf-in-new-tab', url: route('report.view'));
     }
 
     private function aplicarOrdenacao($query, $ordenacao, $direcao)

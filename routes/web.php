@@ -4,6 +4,9 @@ use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ReportViewController;
+
+Route::get('/report/view', [ReportViewController::class, 'view'])->name('report.view')->middleware('web');
 
 Route::get('/', function () {
     return redirect('/admin');
