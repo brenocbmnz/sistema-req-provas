@@ -25,7 +25,8 @@
         }
 
         th {
-            background-color: #f2f2f2;
+            background-color: #800000;
+            color: #eeeeeeff
         }
 
         h1 {
