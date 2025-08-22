@@ -209,13 +209,31 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         ->default(now()->endOfMonth()),
                 ])->columns(2),
                 
+                Section::make('Filtro por Nível de Ensino')
+                    ->description('Selecione quais níveis de ensino deseja incluir no relatório.')
+                    ->schema([
+                        Group::make([
+                            Checkbox::make('incluir_fundamental_1')
+                                ->label('Fundamental I')
+                                ->default(true),
+                            Checkbox::make('incluir_fundamental_2')
+                                ->label('Fundamental II')
+                                ->default(true),
+                            Checkbox::make('incluir_ensino_medio')
+                                ->label('Ensino Médio')
+                                ->default(true),
+                        Checkbox::make('incluir_terceirao')
+                                ->label('Terceirão')
+                                ->default(true),
+                        ])->columns(4),
+                        ]),
+                    
                 Section::make('Opções de Ordenação')
                     ->description('Escolha como deseja organizar os dados no relatório geral.')
                     ->schema([
                         Select::make('ordenacao')
                             ->label('Ordenar por')
                             ->options([
-                                'nivel' => 'Nível de Ensino',
                                 'turma' => 'Turma',
                                 'disciplina' => 'Disciplina',
                                 'professor' => 'Professor',
@@ -237,25 +255,45 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                             ->required(),
                     ])->columns(2),
                 
-                Section::make('Filtro por Nível de Ensino')
-                    ->description('Selecione quais níveis de ensino deseja incluir no relatório.')
+                                    Section::make('Filtro por Disciplina')
+                    ->description('Selecione quais disciplinas deseja incluir no relatório.')
                     ->schema([
-                        Group::make([
-                            Checkbox::make('incluir_fundamental_1')
-                                ->label('Fundamental I')
-                                ->default(true),
-                            Checkbox::make('incluir_fundamental_2')
-                                ->label('Fundamental II')
-                                ->default(true),
-                            Checkbox::make('incluir_ensino_medio')
-                                ->label('Ensino Médio')
-                                ->default(true),
-                        Checkbox::make('incluir_terceirao')
-                                ->label('Terceirão')
-                                ->default(true),
-                        ])->columns(4),
+                        Group::make(function () {
+                            $disciplinas = Disciplina::query()
+                                ->orderBy('nome', 'asc')
+                                ->get();
+                                
+                            $checkboxes = [];
+                            
+                            foreach ($disciplinas as $disciplina) {
+                                $checkboxes[] = Checkbox::make('disciplina_' . $disciplina->id)
+                                    ->label($disciplina->nome)
+                                    ->default(true);
+                            }
+                            
+                            return $checkboxes;
+                        })->columns(3),
                     ])
-                    ->visible(fn (Get $get): bool => $get('ordenacao') === 'nivel'),
+                    ->visible(fn (Get $get): bool => $get('ordenacao') === 'disciplina'),
+                
+                Section::make('Filtro por Professor')
+                    ->description('Selecione quais professores deseja incluir no relatório.')
+                    ->schema([
+                        Select::make('professores_selecionados')
+                            ->label('Professores')
+                            ->options(function(){
+                                return Professor::query()
+                                    ->whereHas('disciplinas')
+                                    ->orderBy('nome', 'asc')
+                                    ->pluck('nome', 'id');
+                            })
+                            ->placeholder('Selecione os professores')
+                            ->multiple()
+                            ->searchable()
+                            ->helperText('Selecione os professores que deseja incluir no relatório.'),
+                    ])
+                    ->visible(fn (Get $get): bool => $get('ordenacao') === 'professor'),
+                
             ]);
     }
 
@@ -541,12 +579,57 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             return;
         }
 
+        // Processar filtros de disciplina se a ordenação for por disciplina
+        $disciplinasIncluir = [];
+        if (($formDataGeral['ordenacao'] ?? '') === 'disciplina') {
+            $todasDisciplinas = Disciplina::all();
+            foreach ($todasDisciplinas as $disciplina) {
+                if ($formDataGeral['disciplina_' . $disciplina->id] ?? true) {
+                    $disciplinasIncluir[] = $disciplina->id;
+                }
+            }
+            
+            if (empty($disciplinasIncluir)) {
+                Notification::make()
+                    ->title('Erro de validação')
+                    ->body('Selecione pelo menos uma disciplina.')
+                    ->danger()
+                    ->send();
+                return;
+            }
+        }
+
+        // Processar filtros de professor se a ordenação for por professor
+        $professoresIncluir = [];
+        if (($formDataGeral['ordenacao'] ?? '') === 'professor') {
+            $professoresIncluir = $formDataGeral['professores_selecionados'] ?? [];
+            
+            if (empty($professoresIncluir)) {
+                Notification::make()
+                    ->title('Erro de validação')
+                    ->body('Selecione pelo menos um professor.')
+                    ->danger()
+                    ->send();
+                return;
+            }
+        }
+
         // Query base com filtro de data e níveis de ensino selecionados
         $query = Requerimento::query()
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
             ->where('data_requerimento', '<=', $formDataGeral['data_final'])
             ->whereIn('nivel_ensino', $niveisIncluir);
+        
+        // Aplicar filtro de disciplina se necessário
+        if (!empty($disciplinasIncluir)) {
+            $query->whereIn('disciplina_id', $disciplinasIncluir);
+        }
+        
+        // Aplicar filtro de professor se necessário
+        if (!empty($professoresIncluir)) {
+            $query->whereIn('professor_id', $professoresIncluir);
+        }
 
         // Aplicar ordenação baseada na seleção do usuário
         $ordenacao = $formDataGeral['ordenacao'] ?? 'nivel';
@@ -594,6 +677,9 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             case 'nivel':
                 // Ordenação customizada por nível de ensino: Fundamental I, Fundamental II, Ensino Médio, Terceirão
                 $dadosAgrupados = $dadosAgrupados->sort(function ($a, $b) use ($direcao) {
+                    $reqA = $a['requerimentos']->first();
+                    $reqB = $b['requerimentos']->first();
+                    
                     $nivelPrioridade = [
                         'Fundamental I' => 1,
                         'Fundamental II' => 2,
@@ -601,23 +687,21 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         'Terceirão' => 4
                     ];
                     
-                    $nivelA = $a['requerimentos']->first()->nivel_ensino;
-                    $nivelB = $b['requerimentos']->first()->nivel_ensino;
-                    
-                    $prioridadeA = $nivelPrioridade[$nivelA] ?? 4;
-                    $prioridadeB = $nivelPrioridade[$nivelB] ?? 4;
+                    $prioridadeNivelA = $nivelPrioridade[$reqA->nivel_ensino] ?? 4;
+                    $prioridadeNivelB = $nivelPrioridade[$reqB->nivel_ensino] ?? 4;
                     
                     // Primeiro compara por nível de ensino
-                    $comparison = $prioridadeA <=> $prioridadeB;
+                    $comparison = $prioridadeNivelA <=> $prioridadeNivelB;
                     if ($comparison !== 0) {
                         return $direcao === 'asc' ? $comparison : -$comparison;
                     }
                     
-                    // Depois compara por série/ano
-                    $anoA = $a['requerimentos']->first()->ano;
-                    $anoB = $b['requerimentos']->first()->ano;
-                    if ($anoA !== $anoB) {
-                        $anoComparison = $anoA <=> $anoB;
+                    // Depois compara por prioridade de ano/série usando a nova função
+                    $prioridadeAnoA = $this->obterPrioridadeAnoSerie($reqA->nivel_ensino, $reqA->ano);
+                    $prioridadeAnoB = $this->obterPrioridadeAnoSerie($reqB->nivel_ensino, $reqB->ano);
+                    
+                    if ($prioridadeAnoA !== $prioridadeAnoB) {
+                        $anoComparison = $prioridadeAnoA <=> $prioridadeAnoB;
                         return $direcao === 'asc' ? $anoComparison : -$anoComparison;
                     }
                     
@@ -637,13 +721,29 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 break;
             case 'turma':
                 $dadosAgrupados = $dadosAgrupados->sort(function ($a, $b) use ($direcao) {
-                    $comparison = strcmp($a['requerimentos']->first()->turma, $b['requerimentos']->first()->turma);
+                    $reqA = $a['requerimentos']->first();
+                    $reqB = $b['requerimentos']->first();
+                    
+                    // Primeiro ordena por prioridade de ano/série
+                    $prioridadeA = $this->obterPrioridadeAnoSerie($reqA->nivel_ensino, $reqA->ano);
+                    $prioridadeB = $this->obterPrioridadeAnoSerie($reqB->nivel_ensino, $reqB->ano);
+                    
+                    if ($prioridadeA !== $prioridadeB) {
+                        $comparison = $prioridadeA <=> $prioridadeB;
+                        return $direcao === 'asc' ? $comparison : -$comparison;
+                    }
+                    
+                    // Se mesmo ano/série, ordena por turma (A, B, C, etc)
+                    $comparison = strcmp($reqA->turma, $reqB->turma);
                     return $direcao === 'asc' ? $comparison : -$comparison;
                 });
                 break;
             default:
-                // Ordenação customizada que coloca Terceirão por último
+                // Ordenação customizada que segue a ordem escolar
                 $dadosAgrupados = $dadosAgrupados->sort(function ($a, $b) {
+                    $reqA = $a['requerimentos']->first();
+                    $reqB = $b['requerimentos']->first();
+                    
                     // Definir prioridade para níveis de ensino
                     $nivelPrioridade = [
                         'Fundamental I' => 1,
@@ -652,22 +752,20 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         'Terceirão' => 4
                     ];
                     
-                    $nivelA = $a['requerimentos']->first()->nivel_ensino;
-                    $nivelB = $b['requerimentos']->first()->nivel_ensino;
-                    
-                    $prioridadeA = $nivelPrioridade[$nivelA] ?? 4;
-                    $prioridadeB = $nivelPrioridade[$nivelB] ?? 4;
+                    $prioridadeNivelA = $nivelPrioridade[$reqA->nivel_ensino] ?? 4;
+                    $prioridadeNivelB = $nivelPrioridade[$reqB->nivel_ensino] ?? 4;
                     
                     // Primeiro compara por nível de ensino
-                    if ($prioridadeA !== $prioridadeB) {
-                        return $prioridadeA <=> $prioridadeB;
+                    if ($prioridadeNivelA !== $prioridadeNivelB) {
+                        return $prioridadeNivelA <=> $prioridadeNivelB;
                     }
                     
-                    // Depois compara por série/ano
-                    $anoA = $a['requerimentos']->first()->ano;
-                    $anoB = $b['requerimentos']->first()->ano;
-                    if ($anoA !== $anoB) {
-                        return $anoA <=> $anoB;
+                    // Depois compara por prioridade de ano/série usando a nova função
+                    $prioridadeAnoA = $this->obterPrioridadeAnoSerie($reqA->nivel_ensino, $reqA->ano);
+                    $prioridadeAnoB = $this->obterPrioridadeAnoSerie($reqB->nivel_ensino, $reqB->ano);
+                    
+                    if ($prioridadeAnoA !== $prioridadeAnoB) {
+                        return $prioridadeAnoA <=> $prioridadeAnoB;
                     }
                     
                     // Por último compara por disciplina
@@ -738,12 +836,57 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             return;
         }
 
+        // Processar filtros de disciplina se a ordenação for por disciplina
+        $disciplinasIncluir = [];
+        if (($formDataGeral['ordenacao'] ?? '') === 'disciplina') {
+            $todasDisciplinas = Disciplina::all();
+            foreach ($todasDisciplinas as $disciplina) {
+                if ($formDataGeral['disciplina_' . $disciplina->id] ?? true) {
+                    $disciplinasIncluir[] = $disciplina->id;
+                }
+            }
+            
+            if (empty($disciplinasIncluir)) {
+                Notification::make()
+                    ->title('Erro de validação')
+                    ->body('Selecione pelo menos uma disciplina.')
+                    ->danger()
+                    ->send();
+                return;
+            }
+        }
+
+        // Processar filtros de professor se a ordenação for por professor
+        $professoresIncluir = [];
+        if (($formDataGeral['ordenacao'] ?? '') === 'professor') {
+            $professoresIncluir = $formDataGeral['professores_selecionados'] ?? [];
+            
+            if (empty($professoresIncluir)) {
+                Notification::make()
+                    ->title('Erro de validação')
+                    ->body('Selecione pelo menos um professor.')
+                    ->danger()
+                    ->send();
+                return;
+            }
+        }
+
         // Query base com filtro de data e níveis de ensino selecionados
         $query = Requerimento::query()
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
             ->where('data_requerimento', '<=', $formDataGeral['data_final'])
             ->whereIn('nivel_ensino', $niveisIncluir);
+        
+        // Aplicar filtro de disciplina se necessário
+        if (!empty($disciplinasIncluir)) {
+            $query->whereIn('disciplina_id', $disciplinasIncluir);
+        }
+        
+        // Aplicar filtro de professor se necessário
+        if (!empty($professoresIncluir)) {
+            $query->whereIn('professor_id', $professoresIncluir);
+        }
 
         // Aplicar ordenação baseada na seleção do usuário
         $ordenacao = $formDataGeral['ordenacao'] ?? 'nivel';
@@ -803,23 +946,26 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         ELSE 5
                     END {$ordenacaoNivel}
                 ")
-                ->orderBy('ano', $direcao)
+                ->orderByRaw("
+                    CASE 
+                        WHEN nivel_ensino IN ('Fundamental I', 'Fundamental II') THEN ano
+                        WHEN nivel_ensino IN ('Ensino Médio', 'Terceirão') THEN ano + 8
+                        ELSE 99
+                    END {$direcao}
+                ")
                 ->orderBy('turma', $direcao)
                 ->orderBy('nome_completo', 'asc');
                 
             case 'turma':
-                return $query->orderBy('turma', $direcao)
-                            ->orderBy('ano', $direcao)
-                            ->orderByRaw("
-                                CASE nivel_ensino 
-                                    WHEN 'Fundamental I' THEN 1
-                                    WHEN 'Fundamental II' THEN 2
-                                    WHEN 'Ensino Médio' THEN 3
-                                    WHEN 'Terceirão' THEN 4
-                                    ELSE 5
-                                END ASC
-                            ")
-                            ->orderBy('nome_completo', 'asc');
+                return $query->orderByRaw("
+                    CASE 
+                        WHEN nivel_ensino IN ('Fundamental I', 'Fundamental II') THEN ano
+                        WHEN nivel_ensino IN ('Ensino Médio', 'Terceirão') THEN ano + 8
+                        ELSE 99
+                    END {$direcao}
+                ")
+                ->orderBy('turma', $direcao)
+                ->orderBy('nome_completo', 'asc');
                 
             case 'disciplina':
                 return $query->join('disciplinas', 'requerimentos.disciplina_id', '=', 'disciplinas.id')
@@ -880,7 +1026,13 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         ELSE 5
                     END ASC
                 ")
-                ->orderBy('ano', 'asc')
+                ->orderByRaw("
+                    CASE 
+                        WHEN nivel_ensino IN ('Fundamental I', 'Fundamental II') THEN ano
+                        WHEN nivel_ensino IN ('Ensino Médio', 'Terceirão') THEN ano + 8
+                        ELSE 99
+                    END ASC
+                ")
                 ->orderBy('turma', 'asc')
                 ->orderBy('nome_completo', 'asc');
         }
@@ -899,9 +1051,29 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         };
     }
 
+    /**
+     * Retorna a prioridade de ordenação para ano/série seguindo a ordem escolar:
+     * 1º ano ao 8º ano, depois 1ª série à 3ª série
+     */
+    private function obterPrioridadeAnoSerie($nivelEnsino, $ano)
+    {
+        // Para Fundamental I e II: anos 1-8 têm prioridade 1-8
+        if (in_array($nivelEnsino, ['Fundamental I', 'Fundamental II'])) {
+            return (int) $ano;
+        }
+        
+        // Para Ensino Médio e Terceirão: séries 1-3 têm prioridade 9-11
+        if (in_array($nivelEnsino, ['Ensino Médio', 'Terceirão'])) {
+            return 8 + (int) $ano;
+        }
+        
+        // Fallback
+        return 99;
+    }
+
     private function agruparRequerimentos($requerimentos, $agruparPor)
     {
-        return $requerimentos->groupBy(function ($req) use ($agruparPor) {
+        $grupos = $requerimentos->groupBy(function ($req) use ($agruparPor) {
             return match($agruparPor) {
                 'professor' => $req->professor->nome ?? 'Sem Professor',
                 'disciplina' => $req->disciplina->nome ?? 'Sem Disciplina',
@@ -917,7 +1089,29 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 'total' => $grupo->count(),
                 'requerimentos' => $grupo->sortBy('nome_completo')
             ];
-        })->sortBy('titulo');
+        });
+
+        // Aplicar ordenação especial para agrupamento por turma
+        if ($agruparPor === 'turma') {
+            return $grupos->sort(function ($a, $b) {
+                // Extrair informações do primeiro requerimento de cada grupo
+                $reqA = $a['requerimentos']->first();
+                $reqB = $b['requerimentos']->first();
+                
+                // Usar a função de prioridade para ordenar
+                $prioridadeA = $this->obterPrioridadeAnoSerie($reqA->nivel_ensino, $reqA->ano);
+                $prioridadeB = $this->obterPrioridadeAnoSerie($reqB->nivel_ensino, $reqB->ano);
+                
+                if ($prioridadeA !== $prioridadeB) {
+                    return $prioridadeA <=> $prioridadeB;
+                }
+                
+                // Se mesmo ano/série, ordena por turma
+                return strcmp($reqA->turma, $reqB->turma);
+            });
+        }
+
+        return $grupos->sortBy('titulo');
     }
 
     private function obterTituloAgrupamento($agruparPor)

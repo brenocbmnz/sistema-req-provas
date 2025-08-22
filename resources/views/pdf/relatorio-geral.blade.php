@@ -25,7 +25,8 @@
         }
 
         th {
-            background-color: #f2f2f2;
+            color: #eeeeeeff;
+            background-color: #800000;
             font-weight: bold;
             text-align: center;
         }
@@ -33,12 +34,14 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
+            
         }
 
         .header h1 {
             margin: 0;
             font-size: 18px;
             font-weight: bold;
+            
         }
 
         .header p {
@@ -67,6 +70,7 @@
         .total-row {
             background-color: #f5e6ea;
             font-weight: bold;
+            
         }
 
         .divider {

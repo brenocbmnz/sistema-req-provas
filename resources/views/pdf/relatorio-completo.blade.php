@@ -48,7 +48,8 @@
             text-align: center;
             font-weight: bold;
             font-size: 14px;
-            background-color: #f5e6ea;
+            color: #eeeeeeff;
+            background-color: #800000;
             padding: 5px 0 5px 0;
             border-bottom: 1px solid #333;
         }
