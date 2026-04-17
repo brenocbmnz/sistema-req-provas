@@ -538,7 +538,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         ]);
 
         // Abrir nova aba para visualização
-        $this->dispatch('open-pdf-in-new-tab', url: route('report.view'));
+        $this->dispatch('open-pdf-in-new-tab', url: request()->getSchemeAndHttpHost() . '/report/view');
     }
 
     public function generateRelatorioPorSerie()
@@ -796,7 +796,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         ]);
 
         // Abrir nova aba para visualização
-        $this->dispatch('open-pdf-in-new-tab', url: route('report.view'));
+        $this->dispatch('open-pdf-in-new-tab', url: request()->getSchemeAndHttpHost() . '/report/view');
     }
     public function generateRelatorioCompleto()
     {
@@ -928,7 +928,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         ]);
 
         // Abrir nova aba para visualização
-        $this->dispatch('open-pdf-in-new-tab', url: route('report.view'));
+        $this->dispatch('open-pdf-in-new-tab', url: request()->getSchemeAndHttpHost() . '/report/view');
     }
 
     private function aplicarOrdenacao($query, $ordenacao, $direcao)
