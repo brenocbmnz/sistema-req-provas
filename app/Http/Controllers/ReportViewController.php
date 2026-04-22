@@ -39,7 +39,7 @@ class ReportViewController extends Controller
         // with the 'inline' disposition to open it in the browser.
         return new Response($pdf->output(), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
 }
