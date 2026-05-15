@@ -22,6 +22,9 @@ class ProfessoresRelationManager extends RelationManager
             ->recordTitleAttribute('nome')
             ->columns([
                 Tables\Columns\TextColumn::make('nome'),
+                Tables\Columns\TextColumn::make('disciplinas_count')
+                    ->label('Disciplinas')
+                    ->counts('disciplinas'),
             ])
             ->filters([
                 //

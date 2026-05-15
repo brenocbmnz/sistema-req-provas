@@ -5,11 +5,13 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\RequerimentoResource\Pages;
 use App\Enums\MotivoRequerimento;
 use App\Enums\NivelEnsino;
+use App\Models\Disciplina;
 use App\Models\Professor;
 use App\Models\Requerimento;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,6 +24,7 @@ use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Notifications\Notification;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Session;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
 use Filament\Forms\Components\ToggleButtons;
@@ -51,6 +54,7 @@ class RequerimentoResource extends Resource
                             ->label('Nível de Ensino')
                             ->options(NivelEnsino::class)
                             ->live()
+                            ->afterStateUpdated(fn (Set $set) => [$set('disciplina_id', null), $set('professor_id', null)])
                             ->required(),
 
                         Forms\Components\Select::make('ano')
@@ -83,12 +87,23 @@ class RequerimentoResource extends Resource
                             ->relationship('trimestre', 'nome')
                             ->required(),
                         Forms\Components\Select::make('disciplina_id')
-                            ->relationship('disciplina', 'nome')
+                            ->label('Disciplina')
+                            ->options(function (Get $get): Collection {
+                                $nivelEnsino = $get('nivel_ensino');
+                                if (!$nivelEnsino) {
+                                    return collect();
+                                }
+                                return Disciplina::query()
+                                    ->where('nivel_ensino', $nivelEnsino)
+                                    ->orderBy('nome', 'asc')
+                                    ->pluck('nome', 'id');
+                            })
+                            ->disabled(fn (Get $get): bool => !$get('nivel_ensino'))
+                            ->helperText(fn (Get $get): ?string => !$get('nivel_ensino') ? 'Selecione primeiro um nível de ensino' : null)
                             ->live()
+                            ->afterStateUpdated(fn (Set $set) => $set('professor_id', null))
                             ->required()
-                            ->searchable()
-                            ->preload()
-                            ->optionsLimit(20),
+                            ->searchable(),
                         Forms\Components\Select::make('professor_id')
                             ->label('Professor')
                             
@@ -134,6 +149,7 @@ class RequerimentoResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with(['disciplina', 'professor', 'trimestre']))
             ->columns([
                 Tables\Columns\TextColumn::make('nome_completo')->label('Aluno')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('disciplina.nome')->searchable()->sortable(),
@@ -193,7 +209,32 @@ class RequerimentoResource extends Resource
                                 ->label('Editar')
                                 ->icon('heroicon-o-pencil-square')
                                 
-                                ->url(fn ($record) => static::getUrl('edit', ['record' => $record]))
+                                ->url(fn ($record) => static::getUrl('edit', ['record' => $record])),
+                            Action::make('imprimir_aluno')
+                                ->label('Imprimir relatórios deste aluno')
+                                ->icon('heroicon-o-printer')
+                                ->color('gray')
+                                ->action(function ($record, $livewire): void {
+                                    $requerimentos = Requerimento::query()
+                                        ->with(['disciplina', 'professor', 'trimestre'])
+                                        ->where('nome_completo', $record->nome_completo)
+                                        ->orderBy('data_requerimento', 'asc')
+                                        ->get();
+
+                                    $filename = 'relatorio-aluno-' . \Illuminate\Support\Str::slug($record->nome_completo) . '-' . now()->format('Y-m-d_H-i') . '.pdf';
+
+                                    Session::put('pdf_report_data', [
+                                        'view' => 'pdf.relatorio-completo',
+                                        'data' => [
+                                            'requerimentos' => $requerimentos,
+                                            'filtros' => [],
+                                            'ordenacao_info' => null,
+                                        ],
+                                        'filename' => $filename,
+                                    ]);
+
+                                    $livewire->dispatch('open-pdf-in-new-tab', url: route('report.view'));
+                                }),
                         ])
                         ->infolist([
                             \Filament\Infolists\Components\Section::make('Dados do Aluno')
@@ -332,6 +373,28 @@ class RequerimentoResource extends Resource
                                 ->body('O status de ' . $records->count() . ' requerimento(s) foi alterado para "' . $data['status'] . '".')
                                 ->success()
                                 ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    Tables\Actions\BulkAction::make('gerar_relatorio_selecionados')
+                        ->label('Gerar Relatório Selecionados')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('success')
+                        ->action(function (Collection $records, $livewire): void {
+                            $requerimentos = $records->load(['disciplina', 'professor', 'trimestre']);
+
+                            $filename = 'relatorio-alunos-inscritos-' . now()->format('Y-m-d_H-i') . '.pdf';
+
+                            Session::put('pdf_report_data', [
+                                'view' => 'pdf.relatorio-completo',
+                                'data' => [
+                                    'requerimentos' => $requerimentos,
+                                    'filtros' => [],
+                                    'ordenacao_info' => null,
+                                ],
+                                'filename' => $filename,
+                            ]);
+
+                            $livewire->dispatch('open-pdf-in-new-tab', url: route('report.view'));
                         })
                         ->deselectRecordsAfterCompletion(),
                 ]),

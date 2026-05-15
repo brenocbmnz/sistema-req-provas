@@ -20,6 +20,10 @@ class CreateRequerimento extends BaseCreatePage
                 'nivel_ensino' => $data['nivel_ensino'] ?? null,
                 'ano' => $data['ano'] ?? null,
                 'turma' => $data['turma'] ?? null,
+                'trimestre_id' => $data['trimestre_id'] ?? null,
+                'data_requerimento' => $data['data_requerimento'] ?? now()->toDateString(),
+                'motivo' => $data['motivo'] ?? null,
+                'observacao' => $data['observacao'] ?? null,
             ]
         ]);
 
@@ -86,13 +90,12 @@ class CreateRequerimento extends BaseCreatePage
                 'nivel_ensino' => $dadosAluno['nivel_ensino'],
                 'ano' => $dadosAluno['ano'],
                 'turma' => $dadosAluno['turma'],
-                // Limpar os dados do requerimento para novo registro
-                'trimestre_id' => null,
+                'trimestre_id' => $dadosAluno['trimestre_id'] ?? null,
+                'data_requerimento' => $dadosAluno['data_requerimento'] ?? now()->toDateString(),
+                'motivo' => $dadosAluno['motivo'] ?? null,
+                'observacao' => $dadosAluno['observacao'] ?? null,
                 'disciplina_id' => null,
                 'professor_id' => null,
-                'data_requerimento' => now(),
-                'motivo' => null,
-                'observacao' => null,
                 'status' => 'Aprovado',
             ]);
         }

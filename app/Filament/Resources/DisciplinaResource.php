@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\NivelEnsino;
 use App\Filament\Resources\DisciplinaResource\Pages;
-// Adicione a importação do novo Relation Manager
-use App\Filament\Resources\DisciplinaResource\RelationManagers\ProfessoresRelationManager; 
+use App\Filament\Resources\DisciplinaResource\RelationManagers\ProfessoresRelationManager;
 use App\Models\Disciplina;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -30,7 +30,11 @@ public static function form(Form $form): Form
         ->schema([
             Forms\Components\TextInput::make('nome')
                 ->required()
-                ->unique(ignoreRecord: true) 
+                ->unique(ignoreRecord: true)
+                ->columnSpanFull(),
+            Forms\Components\Select::make('nivel_ensino')
+                ->label('Nível de Ensino')
+                ->options(collect(NivelEnsino::cases())->mapWithKeys(fn ($case) => [$case->value => $case->value])->toArray())
                 ->columnSpanFull(),
         ]);
 }
@@ -42,6 +46,12 @@ public static function form(Form $form): Form
                 Tables\Columns\TextColumn::make('nome')
                 ->searchable()
                 ->sortable(),
+                Tables\Columns\TextColumn::make('nivel_ensino')
+                    ->label('Nível de Ensino')
+                    ->badge()
+                    ->color('primary')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('professores_count')
                     ->label('Professores')
                     ->counts('professores')
@@ -72,6 +82,10 @@ public static function form(Form $form): Form
                                 ->schema([
                                     \Filament\Infolists\Components\TextEntry::make('nome')
                                         ->label('Nome da Disciplina'),
+                                    \Filament\Infolists\Components\TextEntry::make('nivel_ensino')
+                                        ->label('Nível de Ensino')
+                                        ->badge()
+                                        ->color('primary'),
                                     \Filament\Infolists\Components\TextEntry::make('professores_count')
                                         ->label('Número de Professores')
                                         ->state(fn ($record) => $record->professores()->count()),

@@ -95,7 +95,9 @@ class ProfessorResource extends Resource
                                         ->label('')
                                         ->listWithLineBreaks()
                                         ->bulleted()
-                                        ->state(fn ($record) => $record->disciplinas->pluck('nome')->toArray() ?: ['Nenhuma disciplina associada'])
+                                        ->state(fn ($record) => $record->disciplinas->map(function ($d) {
+                                            return $d->nome . ($d->nivel_ensino ? ' (' . $d->nivel_ensino->value . ')' : '');
+                                        })->toArray() ?: ['Nenhuma disciplina associada'])
                                         ->columnSpanFull(),
                                 ]),
                         ]),
