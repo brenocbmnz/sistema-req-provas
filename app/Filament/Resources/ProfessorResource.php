@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProfessorResource\Pages;
+use App\Filament\Resources\ProfessorResource\RelationManagers\DisciplinasRelationManager;
 use App\Models\Professor;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -51,6 +52,19 @@ class ProfessorResource extends Resource
                     ->label('Disciplinas')
                     ->counts('disciplinas')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('disciplinas.nivel_ensino')
+                    ->label('Nível(is) de Ensino')
+                    ->badge()
+                    ->color('primary')
+                    ->separator(', ')
+                    ->state(fn ($record) => $record->disciplinas->pluck('nivel_ensino')
+                        ->filter()
+                        ->unique()
+                        ->map(fn ($n) => $n->value)
+                        ->values()
+                        ->toArray()
+                    )
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
                     ->dateTime('d/m/Y H:i')
@@ -142,7 +156,7 @@ class ProfessorResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            DisciplinasRelationManager::class,
         ];
     }
 
