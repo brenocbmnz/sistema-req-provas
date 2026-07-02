@@ -873,11 +873,15 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
         }
 
         // Query base com filtro de data e níveis de ensino selecionados
+        // Checa nivel_ensino no próprio requerimento (antigo) OU na disciplina (novo)
         $query = Requerimento::query()
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
             ->where('data_requerimento', '<=', $formDataGeral['data_final'])
-            ->whereIn('requerimentos.nivel_ensino', $niveisIncluir);
+            ->where(function ($q) use ($niveisIncluir) {
+                $q->whereIn('requerimentos.nivel_ensino', $niveisIncluir)
+                  ->orWhereHas('disciplina', fn ($dq) => $dq->whereIn('nivel_ensino', $niveisIncluir));
+            });
         
         // Aplicar filtro de disciplina se necessário
         if (!empty($disciplinasIncluir)) {
