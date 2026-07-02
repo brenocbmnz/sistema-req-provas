@@ -35,6 +35,7 @@ public static function form(Form $form): Form
             Forms\Components\Select::make('nivel_ensino')
                 ->label('Nível de Ensino')
                 ->options(collect(NivelEnsino::cases())->mapWithKeys(fn ($case) => [$case->value => $case->value])->toArray())
+                ->required()
                 ->columnSpanFull(),
         ]);
 }

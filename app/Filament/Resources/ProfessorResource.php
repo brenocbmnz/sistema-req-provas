@@ -43,7 +43,7 @@ class ProfessorResource extends Resource
                     ->relationship('disciplinas', 'nome')
                     ->preload()
                     ->getOptionLabelFromRecordUsing(
-                        fn ($record) => $record->nome . ($record->nivel_ensino ? ' — ' . $record->nivel_ensino->value : '')
+                        fn ($record) => $record->nome . ($record->nivel_ensino ? ' — ' . $record->nivel_ensino : '')
                     )
                     ->placeholder('Selecione as disciplinas')
                     ->columnSpanFull(),
@@ -119,7 +119,7 @@ class ProfessorResource extends Resource
                                         ->listWithLineBreaks()
                                         ->bulleted()
                                         ->state(fn ($record) => $record->disciplinas->map(function ($d) {
-                                            return $d->nome . ($d->nivel_ensino ? ' (' . $d->nivel_ensino->value . ')' : '');
+                                            return $d->nome . ($d->nivel_ensino ? ' (' . $d->nivel_ensino . ')' : '');
                                         })->toArray() ?: ['Nenhuma disciplina associada'])
                                         ->columnSpanFull(),
                                 ]),
