@@ -615,12 +615,11 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             }
         }
 
-        // Query base com filtro de data e níveis de ensino selecionados
+        // Query base com filtro de data (nivel_ensino filtrado em memória para compatibilidade com dados antigos)
         $query = Requerimento::query()
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
-            ->where('data_requerimento', '<=', $formDataGeral['data_final'])
-            ->whereIn('requerimentos.nivel_ensino', $niveisIncluir);
+            ->where('data_requerimento', '<=', $formDataGeral['data_final']);
         
         // Aplicar filtro de disciplina se necessário
         if (!empty($disciplinasIncluir)) {
@@ -638,7 +637,11 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         $query = $this->aplicarOrdenacao($query, $ordenacao, $direcao);
 
-        $requerimentos = $query->get();
+        // Filtrar por nivel_ensino em memória: checa campo do requerimento (antigo) OU da disciplina (novo)
+        $requerimentos = $query->get()->filter(function ($item) use ($niveisIncluir) {
+            return in_array($item->nivel_ensino, $niveisIncluir)
+                || in_array($item->disciplina?->nivel_ensino, $niveisIncluir);
+        });
 
         if ($requerimentos->isEmpty()) {
             Notification::make()
@@ -651,23 +654,25 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         // Agrupa por série, disciplina e professor, mantendo a ordenação
         $dadosAgrupados = $requerimentos->groupBy(function ($item) {
-            return $item->nivel_ensino . '|' . $item->ano . '|' . ($item->disciplina?->nome ?? 'Sem Disciplina') . '|' . ($item->professor?->nome ?? 'Sem Professor');
+            $nivel = $item->nivel_ensino ?? $item->disciplina?->nivel_ensino ?? 'Sem Nível';
+            return $nivel . '|' . $item->ano . '|' . ($item->disciplina?->nome ?? 'Sem Disciplina') . '|' . ($item->professor?->nome ?? 'Sem Professor');
         })->map(function ($group) {
             $primeiro = $group->first();
-            $nivelEnsino = match($primeiro->nivel_ensino) {
+            $nivelRaw = $primeiro->nivel_ensino ?? $primeiro->disciplina?->nivel_ensino ?? null;
+            $nivelEnsino = match($nivelRaw) {
                 'Fundamental I' => 'Ensino Fundamental I',
-                'Fundamental II' => 'Ensino Fundamental II', 
+                'Fundamental II' => 'Ensino Fundamental II',
                 'Ensino Médio' => 'Ensino Médio',
                 'Terceirão' => 'Terceirão',
-                default => $primeiro->nivel_ensino
+                default => $nivelRaw ?? 'Sem Nível'
             };
             return [
                 'nivel_ensino' => $nivelEnsino,
-                'serie' => ($primeiro->nivel_ensino === 'Ensino Médio' || $primeiro->nivel_ensino === 'Terceirão')
-                    ? $primeiro->ano . 'ª Série' 
+                'serie' => in_array($nivelRaw, ['Ensino Médio', 'Terceirão'])
+                    ? $primeiro->ano . 'ª Série'
                     : $primeiro->ano . 'º Ano',
-                'disciplina' => $primeiro->disciplina->nome,
-                'professor' => $primeiro->professor->nome,
+                'disciplina' => $primeiro->disciplina?->nome ?? 'Sem Disciplina',
+                'professor' => $primeiro->professor?->nome ?? 'Sem Professor',
                 'total_alunos' => $group->count(),
                 'requerimentos' => $group // Adiciona os requerimentos para ordenação detalhada
             ];
@@ -872,16 +877,11 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             }
         }
 
-        // Query base com filtro de data e níveis de ensino selecionados
-        // Checa nivel_ensino no próprio requerimento (antigo) OU na disciplina (novo)
+        // Query base com filtro de data (nivel_ensino filtrado em memória para compatibilidade com dados antigos)
         $query = Requerimento::query()
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
-            ->where('data_requerimento', '<=', $formDataGeral['data_final'])
-            ->where(function ($q) use ($niveisIncluir) {
-                $q->whereIn('requerimentos.nivel_ensino', $niveisIncluir)
-                  ->orWhereHas('disciplina', fn ($dq) => $dq->whereIn('nivel_ensino', $niveisIncluir));
-            });
+            ->where('data_requerimento', '<=', $formDataGeral['data_final']);
         
         // Aplicar filtro de disciplina se necessário
         if (!empty($disciplinasIncluir)) {
@@ -899,7 +899,11 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         $query = $this->aplicarOrdenacao($query, $ordenacao, $direcao);
 
-        $requerimentos = $query->get();
+        // Filtrar por nivel_ensino em memória: checa campo do requerimento (antigo) OU da disciplina (novo)
+        $requerimentos = $query->get()->filter(function ($item) use ($niveisIncluir) {
+            return in_array($item->nivel_ensino, $niveisIncluir)
+                || in_array($item->disciplina?->nivel_ensino, $niveisIncluir);
+        });
 
         if ($requerimentos->isEmpty()) {
             Notification::make()
