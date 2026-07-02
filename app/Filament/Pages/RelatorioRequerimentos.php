@@ -637,10 +637,15 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         $query = $this->aplicarOrdenacao($query, $ordenacao, $direcao);
 
-        // Filtrar por nivel_ensino em memória: checa campo do requerimento (antigo) OU da disciplina (novo)
-        $requerimentos = $query->get()->filter(function ($item) use ($niveisIncluir) {
-            return in_array($item->nivel_ensino, $niveisIncluir)
-                || in_array($item->disciplina?->nivel_ensino, $niveisIncluir);
+        // Filtrar por nivel_ensino em memória: checa campo do requerimento (antigo) OU da disciplina (novo).
+        // Dados legados (nível vazio/nulo) sempre passam; só exclui níveis conhecidos não selecionados.
+        $todosNiveis = ['Fundamental I', 'Fundamental II', 'Ensino Médio', 'Terceirão'];
+        $requerimentos = $query->get()->filter(function ($item) use ($niveisIncluir, $todosNiveis) {
+            $nivel = $item->nivel_ensino ?: $item->disciplina?->nivel_ensino;
+            if (in_array($nivel, $todosNiveis)) {
+                return in_array($nivel, $niveisIncluir);
+            }
+            return true;
         });
 
         if ($requerimentos->isEmpty()) {
@@ -899,10 +904,15 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         $query = $this->aplicarOrdenacao($query, $ordenacao, $direcao);
 
-        // Filtrar por nivel_ensino em memória: checa campo do requerimento (antigo) OU da disciplina (novo)
-        $requerimentos = $query->get()->filter(function ($item) use ($niveisIncluir) {
-            return in_array($item->nivel_ensino, $niveisIncluir)
-                || in_array($item->disciplina?->nivel_ensino, $niveisIncluir);
+        // Filtrar por nivel_ensino em memória: checa campo do requerimento (antigo) OU da disciplina (novo).
+        // Dados legados (nível vazio/nulo) sempre passam; só exclui níveis conhecidos não selecionados.
+        $todosNiveis = ['Fundamental I', 'Fundamental II', 'Ensino Médio', 'Terceirão'];
+        $requerimentos = $query->get()->filter(function ($item) use ($niveisIncluir, $todosNiveis) {
+            $nivel = $item->nivel_ensino ?: $item->disciplina?->nivel_ensino;
+            if (in_array($nivel, $todosNiveis)) {
+                return in_array($nivel, $niveisIncluir);
+            }
+            return true;
         });
 
         if ($requerimentos->isEmpty()) {
