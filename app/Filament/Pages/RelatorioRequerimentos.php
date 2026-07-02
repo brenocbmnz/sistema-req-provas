@@ -202,11 +202,11 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                     DatePicker::make('data_inicial')
                         ->label('Data Inicial')
                         ->required()
-                        ->default(now()->startOfMonth()),
+                        ->default(now()->startOfYear()),
                     DatePicker::make('data_final')
                         ->label('Data Final')
                         ->required()
-                        ->default(now()->endOfMonth()),
+                        ->default(now()->endOfYear()),
                 ])->columns(2),
                 
                 Section::make('Filtro por Nível de Ensino')
