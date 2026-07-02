@@ -53,7 +53,7 @@ class ProfessorResource extends Resource
                     ->counts('disciplinas')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('disciplinas.nivel_ensino')
-                    ->label('Nível(is) de Ensino')
+                    ->label('Nível de Ensino')
                     ->badge()
                     ->color('primary')
                     ->separator(', ')

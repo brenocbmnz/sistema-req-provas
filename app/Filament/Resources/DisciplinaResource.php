@@ -60,7 +60,9 @@ public static function form(Form $form): Form
             ->recordAction('visualizar')
             ->recordUrl(null)
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('nivel_ensino')
+                    ->label('Nível de Ensino')
+                    ->options(collect(\App\Enums\NivelEnsino::cases())->mapWithKeys(fn ($case) => [$case->value => $case->value])->toArray()),
             ])
             ->actions([
                 ActionGroup::make([
