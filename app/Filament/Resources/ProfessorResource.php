@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProfessorResource\Pages;
-use App\Filament\Resources\ProfessorResource\RelationManagers\DisciplinasRelationManager;
 use App\Models\Professor;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -37,6 +36,16 @@ class ProfessorResource extends Resource
                 Forms\Components\TextInput::make('nome')
                     ->required()
                     ->maxLength(255)
+                    ->columnSpanFull(),
+                Forms\Components\Select::make('disciplinas')
+                    ->label('Disciplinas')
+                    ->multiple()
+                    ->relationship('disciplinas', 'nome')
+                    ->preload()
+                    ->getOptionLabelFromRecordUsing(
+                        fn ($record) => $record->nome . ($record->nivel_ensino ? ' — ' . $record->nivel_ensino->value : '')
+                    )
+                    ->placeholder('Selecione as disciplinas')
                     ->columnSpanFull(),
             ]);
     }
@@ -155,9 +164,7 @@ class ProfessorResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            DisciplinasRelationManager::class,
-        ];
+        return [];
     }
 
     public static function getPages(): array

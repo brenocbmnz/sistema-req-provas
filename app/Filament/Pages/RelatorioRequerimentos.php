@@ -234,6 +234,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                         Select::make('ordenacao')
                             ->label('Ordenar por')
                             ->options([
+                                'nivel' => 'Nível de Ensino',
                                 'turma' => 'Turma',
                                 'disciplina' => 'Disciplina',
                                 'professor' => 'Professor',
@@ -619,7 +620,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
             ->where('data_requerimento', '<=', $formDataGeral['data_final'])
-            ->whereIn('nivel_ensino', $niveisIncluir);
+            ->whereIn('requerimentos.nivel_ensino', $niveisIncluir);
         
         // Aplicar filtro de disciplina se necessário
         if (!empty($disciplinasIncluir)) {
@@ -650,7 +651,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
 
         // Agrupa por série, disciplina e professor, mantendo a ordenação
         $dadosAgrupados = $requerimentos->groupBy(function ($item) {
-            return $item->nivel_ensino . '|' . $item->ano . '|' . $item->disciplina->nome . '|' . $item->professor->nome;
+            return $item->nivel_ensino . '|' . $item->ano . '|' . ($item->disciplina?->nome ?? 'Sem Disciplina') . '|' . ($item->professor?->nome ?? 'Sem Professor');
         })->map(function ($group) {
             $primeiro = $group->first();
             $nivelEnsino = match($primeiro->nivel_ensino) {
@@ -876,7 +877,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             ->with(['disciplina', 'professor', 'trimestre'])
             ->where('data_requerimento', '>=', $formDataGeral['data_inicial'])
             ->where('data_requerimento', '<=', $formDataGeral['data_final'])
-            ->whereIn('nivel_ensino', $niveisIncluir);
+            ->whereIn('requerimentos.nivel_ensino', $niveisIncluir);
         
         // Aplicar filtro de disciplina se necessário
         if (!empty($disciplinasIncluir)) {
@@ -971,7 +972,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 return $query->join('disciplinas', 'requerimentos.disciplina_id', '=', 'disciplinas.id')
                             ->orderBy('disciplinas.nome', $direcao)
                             ->orderByRaw("
-                                CASE nivel_ensino 
+                                CASE requerimentos.nivel_ensino 
                                     WHEN 'Fundamental I' THEN 1
                                     WHEN 'Fundamental II' THEN 2
                                     WHEN 'Ensino Médio' THEN 3
@@ -987,7 +988,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
                 return $query->join('professors', 'requerimentos.professor_id', '=', 'professors.id')
                             ->orderBy('professors.nome', $direcao)
                             ->orderByRaw("
-                                CASE nivel_ensino 
+                                CASE requerimentos.nivel_ensino 
                                     WHEN 'Fundamental I' THEN 1
                                     WHEN 'Fundamental II' THEN 2
                                     WHEN 'Ensino Médio' THEN 3
@@ -1002,7 +1003,7 @@ class RelatorioRequerimentos extends Page implements HasForms, HasActions
             case 'aluno':
                 return $query->orderBy('nome_completo', $direcao)
                             ->orderByRaw("
-                                CASE nivel_ensino 
+                                CASE requerimentos.nivel_ensino 
                                     WHEN 'Fundamental I' THEN 1
                                     WHEN 'Fundamental II' THEN 2
                                     WHEN 'Ensino Médio' THEN 3
