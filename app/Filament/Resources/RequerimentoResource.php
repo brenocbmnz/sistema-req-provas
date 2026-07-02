@@ -88,15 +88,26 @@ class RequerimentoResource extends Resource
                             ->required(),
                         Forms\Components\Select::make('disciplina_id')
                             ->label('Disciplina')
-                            ->options(function (Get $get): Collection {
+                            ->options(function (Get $get, ?Requerimento $record): Collection {
                                 $nivelEnsino = $get('nivel_ensino');
-                                if (!$nivelEnsino) {
-                                    return collect();
+
+                                $options = collect();
+                                if ($nivelEnsino) {
+                                    $options = Disciplina::query()
+                                        ->where('nivel_ensino', $nivelEnsino)
+                                        ->orderBy('nome', 'asc')
+                                        ->pluck('nome', 'id');
                                 }
-                                return Disciplina::query()
-                                    ->where('nivel_ensino', $nivelEnsino)
-                                    ->orderBy('nome', 'asc')
-                                    ->pluck('nome', 'id');
+
+                                // Garante que a disciplina atual (registros antigos sem nível) apareça pelo nome
+                                if ($record && $record->disciplina_id && !$options->has($record->disciplina_id)) {
+                                    $disciplinaAtual = Disciplina::find($record->disciplina_id);
+                                    if ($disciplinaAtual) {
+                                        $options->put($disciplinaAtual->id, $disciplinaAtual->nome);
+                                    }
+                                }
+
+                                return $options;
                             })
                             ->disabled(fn (Get $get): bool => !$get('nivel_ensino'))
                             ->helperText(fn (Get $get): ?string => !$get('nivel_ensino') ? 'Selecione primeiro um nível de ensino' : null)
@@ -107,17 +118,27 @@ class RequerimentoResource extends Resource
                         Forms\Components\Select::make('professor_id')
                             ->label('Professor')
                             
-                            ->options(function (Get $get): Collection {
+                            ->options(function (Get $get, ?Requerimento $record): Collection {
                                 $disciplinaId = $get('disciplina_id');
                                 if (!$disciplinaId) {
                                     return collect();
                                 }
-                                return Professor::query()
+                                $options = Professor::query()
                                     ->whereHas('disciplinas', function ($query) use ($disciplinaId) {
                                         $query->where('disciplinas.id', $disciplinaId);
                                     })
                                     ->orderBy('nome', 'asc')
                                     ->pluck('nome', 'id');
+
+                                // Garante que o professor atual (registros antigos) apareça pelo nome
+                                if ($record && $record->professor_id && !$options->has($record->professor_id)) {
+                                    $professorAtual = Professor::find($record->professor_id);
+                                    if ($professorAtual) {
+                                        $options->put($professorAtual->id, $professorAtual->nome);
+                                    }
+                                }
+
+                                return $options;
                             })
                             ->disabled(fn (Get $get): bool => !$get('disciplina_id'))
                             ->helperText('Selecione primeiro uma disciplina para ver os professores disponíveis')
