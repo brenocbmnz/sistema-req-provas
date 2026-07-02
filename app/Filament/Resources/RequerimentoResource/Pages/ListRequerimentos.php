@@ -3,10 +3,12 @@
 namespace App\Filament\Resources\RequerimentoResource\Pages;
 
 use App\Filament\Resources\RequerimentoResource;
+use App\Models\Requerimento;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Session;
 
 class ListRequerimentos extends ListRecords
 {
@@ -16,6 +18,40 @@ class ListRequerimentos extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+            Actions\Action::make('gerar_relatorio_selecionados')
+                ->label('Gerar Relatório Selecionados')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('success')
+                ->action(function ($livewire): void {
+                    $selectedIds = $livewire->selectedTableRecords ?? [];
+
+                    if (empty($selectedIds)) {
+                        Notification::make()
+                            ->title('Nenhum requerimento selecionado')
+                            ->body('Selecione ao menos um requerimento antes de gerar o relatório.')
+                            ->warning()
+                            ->send();
+                        return;
+                    }
+
+                    $requerimentos = Requerimento::whereIn('id', $selectedIds)
+                        ->with(['disciplina', 'professor', 'trimestre'])
+                        ->get();
+
+                    $filename = 'relatorio-selecionados-' . now()->format('Y-m-d_H-i') . '.pdf';
+
+                    Session::put('pdf_report_data', [
+                        'view' => 'pdf.relatorio-completo',
+                        'data' => [
+                            'requerimentos' => $requerimentos,
+                            'filtros' => [],
+                            'ordenacao_info' => null,
+                        ],
+                        'filename' => $filename,
+                    ]);
+
+                    $livewire->dispatch('open-pdf-in-new-tab', url: route('report.view'));
+                }),
             Actions\Action::make('atualizar_status_concluido')
                 ->label('Atualizar Status para Concluído')
                 ->icon('heroicon-o-clock')

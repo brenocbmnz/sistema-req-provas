@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProfessorResource\Pages;
 use App\Models\Professor;
+use App\Enums\NivelEnsino;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -11,8 +12,10 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\Action;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Infolists;
 use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Builder;
 
 class ProfessorResource extends Resource
 {
@@ -72,18 +75,23 @@ class ProfessorResource extends Resource
                         ->map(fn ($n) => $n->value)
                         ->values()
                         ->toArray()
-                    )
-                    ->toggleable(),
+                    ),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->hidden(),
             ])
             ->recordAction('visualizar')
             ->recordUrl(null)
             ->filters([
-                //
+                SelectFilter::make('nivel_ensino')
+                    ->label('Nível de Ensino')
+                    ->options(collect(NivelEnsino::cases())->mapWithKeys(fn ($e) => [$e->value => $e->value])->toArray())
+                    ->query(fn (Builder $query, array $data) => $query->when(
+                        $data['value'] ?? null,
+                        fn ($q, $v) => $q->whereHas('disciplinas', fn ($dq) => $dq->where('nivel_ensino', $v))
+                    )),
             ])
             ->actions([
                 ActionGroup::make([
